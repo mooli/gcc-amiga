@@ -84,6 +84,10 @@ extern enum attr_size m68k_sched_attr_size (rtx_insn *);
 extern enum attr_op_mem m68k_sched_attr_op_mem (rtx_insn *);
 #endif /* HAVE_ATTR_cpu */
 
+#ifdef TREE_CODE
+extern void init_cumulative_args (CUMULATIVE_ARGS *, tree, rtx, tree, int);
+#endif	/* TREE_CODE  */
+
 #endif /* RTX_CODE */
 
 extern bool m68k_regno_mode_ok (int, machine_mode);

@@ -36,6 +36,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "output.h"
 #include "insn-attr.h"
 #include "recog.h"
+#include "cgraph.h"
 #include "diagnostic-core.h"
 #include "flags.h"
 #include "expmed.h"
@@ -332,6 +333,69 @@ m68k_excess_precision (enum excess_precision_type);
 #undef TARGET_ATOMIC_TEST_AND_SET_TRUEVAL
 #define TARGET_ATOMIC_TEST_AND_SET_TRUEVAL 128
 
+static tree
+m68k_handle_cconv_attribute (tree *node, tree name, tree args, int, bool *no_add_attrs) {
+    switch (TREE_CODE(*node)) {
+    default:
+	warning (OPT_Wattributes, "%qE attribute only applies to functions", name);
+	*no_add_attrs = true;
+	return NULL_TREE;
+    case FUNCTION_TYPE: case METHOD_TYPE: case FIELD_DECL: case TYPE_DECL:
+	if(is_attribute_p("aregparm", name)) {
+	    // acceptance of a parameter involves *not* setting no_add_attrs
+	    return NULL_TREE;
+	}
+	error("Shouldn't happen: m68k_handle_cconv_attribute saw unexpected attribute %qE", name);
+    }
+}
+
+void
+init_cumulative_args (CUMULATIVE_ARGS *cum,  /* Argument info to initialize */
+		      tree fntype,	/* tree ptr for function decl */
+		      rtx libname,	/* SYMBOL_REF of library name or 0 */
+		      tree fndecl,
+		      int caller)
+{
+    sorry("--- enter init_cumulative_args ---");
+    memset(cum, 0, sizeof(*cum));
+	sorry("fndecl = %qE", fndecl);
+	auto attrs = TYPE_ATTRIBUTES(fndecl);
+	while(attrs != NULL_TREE) {
+	    sorry("attr = %qE", attrs);
+	    attrs = TREE_CHAIN(attrs);
+	}
+	auto args = DECL_ARGUMENTS(fndecl);
+	while(args != NULL_TREE) {
+	    sorry("args = %qE", args);
+	    args = TREE_CHAIN(args);
+	}
+    if(fntype) {
+	sorry("fntype = %qE", fntype);
+	auto attrs = TYPE_ATTRIBUTES(fntype);
+	while(attrs != NULL_TREE) {
+	    sorry("attr purpose = %qE", TREE_PURPOSE(attrs));
+	    sorry("attr = %qE", attrs);
+	    attrs = TREE_CHAIN(attrs);
+	}
+	auto args = DECL_ARGUMENTS(fntype);
+	while(args != NULL_TREE) {
+	    sorry("args = %qE", args);
+	    args = TREE_CHAIN(args);
+	}
+	//sorry("init_cumulative args, fndecl set");
+	/* auto target = cgraph_node::get (fndecl); */
+	/* if(target) { */
+	/*     target = target->function_symbol(); */
+	/*     auto i = cgraph_node::local_info(target->decl); */
+	/*     //sorry("%qE", target); */
+	//}
+    } else {
+	sorry("init_cumulative args, fndecl NOT set");
+    }
+    // For a "normal" stackparm function, we start with an offset of zero.
+    cum->bytes = 0;
+}
+
 static const struct attribute_spec m68k_attribute_table[] =
 {
   /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler,
@@ -342,6 +406,8 @@ static const struct attribute_spec m68k_attribute_table[] =
     m68k_handle_fndecl_attribute, false },
   { "interrupt_thread", 0, 0, true,  false, false,
     m68k_handle_fndecl_attribute, false },
+  { "aregparm", 1, 16, false, true, true,
+    m68k_handle_cconv_attribute, true },
   { NULL,                0, 0, false, false, false, NULL, false }
 };
 
@@ -1436,12 +1502,16 @@ m68k_ok_for_sibcall_p (tree decl, tree exp)
 /* On the m68k all args are always pushed.  */
 
 static rtx
-m68k_function_arg (cumulative_args_t cum ATTRIBUTE_UNUSED,
+m68k_function_arg (cumulative_args_t cum_v,
 		   machine_mode mode ATTRIBUTE_UNUSED,
 		   const_tree type ATTRIBUTE_UNUSED,
 		   bool named ATTRIBUTE_UNUSED)
 {
-  return NULL_RTX;
+    CUMULATIVE_ARGS *cum = get_cumulative_args (cum_v);
+    //warning (OPT_Wattributes, "%qE attribute only applies to functions", name);
+    //sorry("Not yet implemented");
+    //return gen_rtx_REG(mode, 8);
+    return NULL_RTX;
 }
 
 static void
@@ -1450,7 +1520,7 @@ m68k_function_arg_advance (cumulative_args_t cum_v, machine_mode mode,
 {
   CUMULATIVE_ARGS *cum = get_cumulative_args (cum_v);
 
-  *cum += (mode != BLKmode
+  cum->bytes += (mode != BLKmode
 	   ? (GET_MODE_SIZE (mode) + 3) & ~3
 	   : (int_size_in_bytes (type) + 3) & ~3);
 }
