@@ -36,7 +36,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "output.h"
 #include "insn-attr.h"
 #include "recog.h"
-#include "cgraph.h"
 #include "diagnostic-core.h"
 #include "flags.h"
 #include "expmed.h"
@@ -333,8 +332,8 @@ m68k_excess_precision (enum excess_precision_type);
 #undef TARGET_ATOMIC_TEST_AND_SET_TRUEVAL
 #define TARGET_ATOMIC_TEST_AND_SET_TRUEVAL 128
 
-static tree
-m68k_handle_cconv_attribute (tree *node, tree name, tree args, int, bool *no_add_attrs) {
+static tree m68k_handle_cconv_attribute
+(tree *node, tree name, tree args, int, bool *no_add_attrs) {
     switch (TREE_CODE(*node)) {
     default:
 	warning (OPT_Wattributes, "%qE attribute only applies to functions", name);
@@ -342,58 +341,41 @@ m68k_handle_cconv_attribute (tree *node, tree name, tree args, int, bool *no_add
 	return NULL_TREE;
     case FUNCTION_TYPE: case METHOD_TYPE: case FIELD_DECL: case TYPE_DECL:
 	if(is_attribute_p("aregparm", name)) {
-	    // acceptance of a parameter involves *not* setting no_add_attrs
+	    /* acceptance of a parameter involves *not* setting no_add_attrs */
 	    return NULL_TREE;
 	}
 	error("Shouldn't happen: m68k_handle_cconv_attribute saw unexpected attribute %qE", name);
     }
 }
 
-void
-init_cumulative_args (CUMULATIVE_ARGS *cum,  /* Argument info to initialize */
-		      tree fntype,	/* tree ptr for function decl */
-		      rtx libname,	/* SYMBOL_REF of library name or 0 */
-		      tree fndecl,
-		      int caller)
-{
-    sorry("--- enter init_cumulative_args ---");
+void init_cumulative_args (
+    CUMULATIVE_ARGS *cum,	/* Argument info to initialize */
+    tree fntype,		/* tree ptr for function decl */
+    rtx libname,		/* SYMBOL_REF of library name or 0 */
+    tree fndecl,
+    int caller
+  ) {
     memset(cum, 0, sizeof(*cum));
-	sorry("fndecl = %qE", fndecl);
-	auto attrs = TYPE_ATTRIBUTES(fndecl);
-	while(attrs != NULL_TREE) {
-	    sorry("attr = %qE", attrs);
-	    attrs = TREE_CHAIN(attrs);
-	}
-	auto args = DECL_ARGUMENTS(fndecl);
-	while(args != NULL_TREE) {
-	    sorry("args = %qE", args);
-	    args = TREE_CHAIN(args);
-	}
-    if(fntype) {
-	sorry("fntype = %qE", fntype);
-	auto attrs = TYPE_ATTRIBUTES(fntype);
-	while(attrs != NULL_TREE) {
-	    sorry("attr purpose = %qE", TREE_PURPOSE(attrs));
-	    sorry("attr = %qE", attrs);
-	    attrs = TREE_CHAIN(attrs);
-	}
-	auto args = DECL_ARGUMENTS(fntype);
-	while(args != NULL_TREE) {
-	    sorry("args = %qE", args);
-	    args = TREE_CHAIN(args);
-	}
-	//sorry("init_cumulative args, fndecl set");
-	/* auto target = cgraph_node::get (fndecl); */
-	/* if(target) { */
-	/*     target = target->function_symbol(); */
-	/*     auto i = cgraph_node::local_info(target->decl); */
-	/*     //sorry("%qE", target); */
-	//}
-    } else {
-	sorry("init_cumulative args, fndecl NOT set");
-    }
-    // For a "normal" stackparm function, we start with an offset of zero.
+
     cum->bytes = 0;
+    cum->regparm_next = 0;
+    cum->regparm_count = 0;
+
+    if(auto attr = lookup_attribute("aregparm", TYPE_ATTRIBUTES(fntype))) {
+	//sorry("attr purpose = %qE", TREE_PURPOSE(attr));
+	//sorry("attr = %qE", attr);
+	auto parms = TREE_VALUE(attr);
+	while(parms != NULL_TREE) {
+	    int nextreg = TREE_INT_CST_LOW(TREE_VALUE(parms));
+	    //warning(OPT_Wattributes, "aregparm: %d", nextreg);
+	    cum->regparms[cum->regparm_count++] = nextreg;
+	    parms = TREE_CHAIN(parms);
+	}
+    }
+    /* warning(OPT_Wattributes, "regparm: next = %d, count = %d", */
+    /* 	cum->regparm_next, */
+    /* 	cum->regparm_count */
+    /*   ); */
 }
 
 static const struct attribute_spec m68k_attribute_table[] =
@@ -797,7 +779,7 @@ m68k_get_function_kind (tree func)
   tree a;
 
   gcc_assert (TREE_CODE (func) == FUNCTION_DECL);
-  
+
   a = lookup_attribute ("interrupt", DECL_ATTRIBUTES (func));
   if (a != NULL_TREE)
     return m68k_fk_interrupt_handler;
@@ -1395,14 +1377,14 @@ m68k_expand_epilogue (bool sibcall_p)
     emit_jump_insn (ret_rtx);
 }
 
-/* Return true if X is a valid comparison operator for the dbcc 
-   instruction.  
+/* Return true if X is a valid comparison operator for the dbcc
+   instruction.
 
    Note it rejects floating point comparison operators.
    (In the future we could use Fdbcc).
 
    It also rejects some comparisons when CC_NO_OVERFLOW is set.  */
-   
+
 int
 valid_dbcc_comparison_p_2 (rtx x, machine_mode mode ATTRIBUTE_UNUSED)
 {
@@ -1459,7 +1441,7 @@ static bool
 m68k_ok_for_sibcall_p (tree decl, tree exp)
 {
   enum m68k_function_kind kind;
-  
+
   /* We cannot use sibcalls for nested functions because we use the
      static chain register for indirect calls.  */
   if (CALL_EXPR_STATIC_CHAIN (exp))
@@ -1495,7 +1477,7 @@ m68k_ok_for_sibcall_p (tree decl, tree exp)
      the same.  */
   if (decl && m68k_get_function_kind (decl) == kind)
     return true;
-  
+
   return false;
 }
 
@@ -1508,6 +1490,11 @@ m68k_function_arg (cumulative_args_t cum_v,
 		   bool named ATTRIBUTE_UNUSED)
 {
     CUMULATIVE_ARGS *cum = get_cumulative_args (cum_v);
+    if(cum->regparm_count > cum->regparm_next) {
+	int reg = cum->regparms[cum->regparm_next++];
+	//warning(OPT_Wattributes, "Using register %d", reg);
+	return gen_rtx_REG(mode, reg);
+    }
     //warning (OPT_Wattributes, "%qE attribute only applies to functions", name);
     //sorry("Not yet implemented");
     //return gen_rtx_REG(mode, 8);
@@ -1629,8 +1616,8 @@ m68k_legitimize_address (rtx x, rtx oldx, machine_mode mode)
   return x;
 }
 
- 
-/* Output a dbCC; jCC sequence.  Note we do not handle the 
+
+/* Output a dbCC; jCC sequence.  Note we do not handle the
    floating point version of this sequence (Fdbcc).  We also
    do not handle alternative conditions when CC_NO_OVERFLOW is
    set.  It is assumed that valid_dbcc_comparison_p and flags_in_68881 will
@@ -2479,19 +2466,19 @@ m68k_wrap_symbol_into_got_ref (rtx x, enum m68k_reloc reloc, rtx temp_reg)
 /* Legitimize PIC addresses.  If the address is already
    position-independent, we return ORIG.  Newly generated
    position-independent addresses go to REG.  If we need more
-   than one register, we lose.  
+   than one register, we lose.
 
    An address is legitimized by making an indirect reference
    through the Global Offset Table with the name of the symbol
-   used as an offset.  
+   used as an offset.
 
-   The assembler and linker are responsible for placing the 
+   The assembler and linker are responsible for placing the
    address of the symbol in the GOT.  The function prologue
    is responsible for initializing a5 to the starting address
    of the GOT.
 
    The assembler is also responsible for translating a symbol name
-   into a constant displacement from the start of the GOT.  
+   into a constant displacement from the start of the GOT.
 
    A quick example may make things a little clearer:
 
@@ -2511,9 +2498,9 @@ m68k_wrap_symbol_into_got_ref (rtx x, enum m68k_reloc reloc, rtx temp_reg)
 
 	movel   a5@(_foo:w), a0
 	movel   #12345, a0@
-   
 
-   That (in a nutshell) is how *all* symbol and label references are 
+
+   That (in a nutshell) is how *all* symbol and label references are
    handled.  */
 
 rtx
@@ -2542,7 +2529,7 @@ legitimize_pic_address (rtx orig, machine_mode mode ATTRIBUTE_UNUSED,
 
       /* legitimize both operands of the PLUS */
       gcc_assert (GET_CODE (XEXP (orig, 0)) == PLUS);
-      
+
       base = legitimize_pic_address (XEXP (XEXP (orig, 0), 0), Pmode, reg);
       orig = legitimize_pic_address (XEXP (XEXP (orig, 0), 1), Pmode,
 				     base == reg ? 0 : reg);
@@ -2604,13 +2591,13 @@ m68k_call_tls_get_addr (rtx x, rtx eqv, enum m68k_reloc reloc)
      is the simpliest way of generating a call.  The difference between
      __tls_get_addr() and libcall is that the result is returned in D0
      instead of A0.  To workaround this, we use m68k_libcall_value_in_a0_p
-     which temporarily switches returning the result to A0.  */ 
+     which temporarily switches returning the result to A0.  */
 
   m68k_libcall_value_in_a0_p = true;
   a0 = emit_library_call_value (m68k_get_tls_get_addr (), NULL_RTX, LCT_PURE,
 				Pmode, 1, x, Pmode);
   m68k_libcall_value_in_a0_p = false;
-  
+
   insns = get_insns ();
   end_sequence ();
 
@@ -2638,7 +2625,7 @@ m68k_get_m68k_read_tp (void)
 /* Emit instruction sequence that calls __m68k_read_tp.
    A pseudo register with result of __m68k_read_tp call is returned.  */
 
-static rtx 
+static rtx
 m68k_call_m68k_read_tp (void)
 {
   rtx a0;
@@ -2652,7 +2639,7 @@ m68k_call_m68k_read_tp (void)
      is the simpliest way of generating a call.  The difference between
      __m68k_read_tp() and libcall is that the result is returned in D0
      instead of A0.  To workaround this, we use m68k_libcall_value_in_a0_p
-     which temporarily switches returning the result to A0.  */ 
+     which temporarily switches returning the result to A0.  */
 
   /* Emit the call sequence.  */
   m68k_libcall_value_in_a0_p = true;
@@ -2691,7 +2678,7 @@ m68k_legitimize_tls_address (rtx orig)
 	rtx eqv;
 	rtx a0;
 	rtx x;
- 
+
 	/* Attach a unique REG_EQUIV, to allow the RTL optimizers to
 	   share the LDM result with other LD model accesses.  */
 	eqv = gen_rtx_UNSPEC (Pmode, gen_rtvec (1, const0_rtx),
@@ -3161,7 +3148,7 @@ output_move_qimode (rtx *operands)
 {
   /* 68k family always modifies the stack pointer by at least 2, even for
      byte pushes.  The 5200 (ColdFire) does not do this.  */
-  
+
   /* This case is generated by pushqi1 pattern now.  */
   gcc_assert (!(GET_CODE (operands[0]) == MEM
 		&& GET_CODE (XEXP (operands[0], 0)) == PRE_DEC
@@ -4215,13 +4202,13 @@ notice_update_cc (rtx exp, rtx insn)
   if (GET_CODE (exp) == SET)
     {
       if (GET_CODE (SET_SRC (exp)) == CALL)
-	CC_STATUS_INIT; 
+	CC_STATUS_INIT;
       else if (ADDRESS_REG_P (SET_DEST (exp)))
 	{
 	  if (cc_status.value1 && modified_in_p (cc_status.value1, insn))
 	    cc_status.value1 = 0;
 	  if (cc_status.value2 && modified_in_p (cc_status.value2, insn))
-	    cc_status.value2 = 0; 
+	    cc_status.value2 = 0;
 	}
       /* fmoves to memory or data registers do not set the condition
 	 codes.  Normal moves _do_ set the condition codes, but not in
@@ -4235,7 +4222,7 @@ notice_update_cc (rtx exp, rtx insn)
 	       && (FP_REG_P (SET_SRC (exp))
 		   || GET_CODE (SET_SRC (exp)) == FIX
 		   || FLOAT_MODE_P (GET_MODE (SET_DEST (exp)))))
-	CC_STATUS_INIT; 
+	CC_STATUS_INIT;
       /* A pair of move insns doesn't produce a useful overall cc.  */
       else if (!FP_REG_P (SET_DEST (exp))
 	       && !FP_REG_P (SET_SRC (exp))
@@ -4243,7 +4230,7 @@ notice_update_cc (rtx exp, rtx insn)
 	       && (GET_CODE (SET_SRC (exp)) == REG
 		   || GET_CODE (SET_SRC (exp)) == MEM
 		   || GET_CODE (SET_SRC (exp)) == CONST_DOUBLE))
-	CC_STATUS_INIT; 
+	CC_STATUS_INIT;
       else if (SET_DEST (exp) != pc_rtx)
 	{
 	  cc_status.flags = 0;
@@ -4292,7 +4279,7 @@ notice_update_cc (rtx exp, rtx insn)
 	   ends with a move insn moving r2 in r2's mode.
 	   Thus, the cc's are set for r2.
 	   This can set N bit spuriously.  */
-	cc_status.flags |= CC_NOT_NEGATIVE; 
+	cc_status.flags |= CC_NOT_NEGATIVE;
 
       default:
 	break;
@@ -4357,7 +4344,7 @@ output_move_const_single (rtx *operands)
    to get the desired constant.  */
 
 /* This code has been fixed for cross-compilation.  */
-  
+
 static int inited_68881_table = 0;
 
 static const char *const strings_68881[7] = {
@@ -4425,7 +4412,7 @@ standard_68881_constant_p (rtx x)
       if (real_identical (r, &values_68881[i]))
         return (codes_68881[i]);
     }
-  
+
   if (GET_MODE (x) == SFmode)
     return 0;
 
@@ -4711,7 +4698,7 @@ m68k_delegitimize_address (rtx orig_x)
   unspec = XEXP (addr.offset, 0);
   if (GET_CODE (unspec) == PLUS && CONST_INT_P (XEXP (unspec, 1)))
     unspec = XEXP (unspec, 0);
-  if (GET_CODE (unspec) != UNSPEC 
+  if (GET_CODE (unspec) != UNSPEC
       || (XINT (unspec, 1) != UNSPEC_RELOC16
 	  && XINT (unspec, 1) != UNSPEC_RELOC32))
     return orig_x;
@@ -4732,7 +4719,7 @@ m68k_delegitimize_address (rtx orig_x)
     x = replace_equiv_address_nv (orig_x, x);
   return x;
 }
-  
+
 
 /* A C compound statement to output to stdio stream STREAM the
    assembler syntax for an instruction operand that is a memory
@@ -4746,7 +4733,7 @@ m68k_delegitimize_address (rtx orig_x)
    It is possible for PIC to generate a (plus (label_ref...) (reg...))
    and we handle that just like we would a (plus (symbol_ref...) (reg...)).
 
-   This routine is responsible for distinguishing between -fpic and -fPIC 
+   This routine is responsible for distinguishing between -fpic and -fPIC
    style relocations in an address.  When generating -fpic code the
    offset is output in word mode (e.g. movel a5@(_foo:w), a0).  When generating
    -fPIC code the offset is output in long mode (e.g. movel a5@(_foo:l), a0) */
@@ -6128,7 +6115,7 @@ m68k_sched_variable_issue (FILE *sched_dump ATTRIBUTE_UNUSED,
 
 	case CPU_CFV3:
 	  insn_size = sched_get_attr_size_int (insn);
-	  
+
 	  /* ColdFire V3 and V4 cores have instruction buffers that can
 	     accumulate up to 8 instructions regardless of instructions'
 	     sizes.  So we should take care not to "prefetch" 24 one-word

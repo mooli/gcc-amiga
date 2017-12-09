@@ -415,7 +415,7 @@ along with GCC; see the file COPYING3.  If not see
 /* Most m68k targets use %a6 as a frame pointer.  The AmigaOS
    ABI uses %a6 for shared library calls, therefore the frame
    pointer is shifted to %a5 on this target.  */
-#define FRAME_POINTER_REGNUM A6_REG
+#define FRAME_POINTER_REGNUM A5_REG
 
 /* Base register for access to arguments of the function.
  * This isn't a hardware register. It will be eliminated to the
@@ -518,7 +518,11 @@ extern enum reg_class regno_reg_class[];
    such as FUNCTION_ARG to determine where the next arg should go.  */
 
 typedef struct m68k_args {
-    int bytes;			/* bytes of arguments scanned so far */
+    /* bytes of stack-based arguments scanned so far */
+    int bytes;
+    size_t regparm_next;
+    size_t regparm_count;
+    int regparms[16];
 } CUMULATIVE_ARGS;
 
 /* Initialize a variable CUM of type CUMULATIVE_ARGS
