@@ -62,6 +62,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "builtins.h"
 #include "rtl-iter.h"
 
+#include "print-tree.h"
+
 /* This file should be included last.  */
 #include "target-def.h"
 
@@ -344,38 +346,40 @@ static tree m68k_handle_cconv_attribute
 	    /* acceptance of a parameter involves *not* setting no_add_attrs */
 	    return NULL_TREE;
 	}
-	error("Shouldn't happen: m68k_handle_cconv_attribute saw unexpected attribute %qE", name);
+	sorry("m68k_handle_cconv_attribute saw unexpected attribute %qE", name);
     }
 }
 
 void init_cumulative_args (
     CUMULATIVE_ARGS *cum,	/* Argument info to initialize */
     tree fntype,		/* tree ptr for function decl */
-    rtx libname,		/* SYMBOL_REF of library name or 0 */
-    tree fndecl,
-    int caller
+    rtx /* libname */,		/* SYMBOL_REF of library name or 0 */
+    tree /* fndecl */,
+    int /* caller */
   ) {
     memset(cum, 0, sizeof(*cum));
 
     cum->bytes = 0;
     cum->regparm_next = 0;
     cum->regparm_count = 0;
+    cum->regparm_clobber = false;
+
+    //warning(OPT_Wall, "init_cumulative_args: fntype=%qE", fntype);
+    //debug_tree(fntype);
 
     if(auto attr = lookup_attribute("aregparm", TYPE_ATTRIBUTES(fntype))) {
-	//sorry("attr purpose = %qE", TREE_PURPOSE(attr));
-	//sorry("attr = %qE", attr);
 	auto parms = TREE_VALUE(attr);
+	static char call_used_registers[] = CALL_USED_REGISTERS;
 	while(parms != NULL_TREE) {
 	    int nextreg = TREE_INT_CST_LOW(TREE_VALUE(parms));
+	    // If this register should be saved across function calls, we set the clobber flag.
+	    if(!call_used_registers[nextreg])
+		cum->regparm_clobber = true;
 	    //warning(OPT_Wattributes, "aregparm: %d", nextreg);
 	    cum->regparms[cum->regparm_count++] = nextreg;
 	    parms = TREE_CHAIN(parms);
 	}
     }
-    /* warning(OPT_Wattributes, "regparm: next = %d, count = %d", */
-    /* 	cum->regparm_next, */
-    /* 	cum->regparm_count */
-    /*   ); */
 }
 
 static const struct attribute_spec m68k_attribute_table[] =
@@ -1466,6 +1470,29 @@ m68k_ok_for_sibcall_p (tree decl, tree exp)
 		&& m68k_reg_present_p (call_value, REGNO (cfun_value)))))
 	return false;
     }
+
+  //warning(OPT_Wall, "Dumping decl=%qE", decl); debug_tree(decl);
+  //warning(OPT_Wall, "Dumping exp=%qE", decl); debug_tree(exp);
+  //auto v = ...;
+  //warning(OPT_Wall, "Dumping %qE", v); debug_tree(v);
+  // What we want to do is disable the sibcall optimisation if we are calling a regparm function
+  // that takes noclobber registers. It's debatable that this is the "right" fix, but it solves the
+  // immediate problem of bad code generation in that situation.
+
+  CUMULATIVE_ARGS cargs;
+  init_cumulative_args(&cargs, TREE_TYPE(decl), NULL_RTX, decl, 0);
+  if(cargs.regparm_clobber) {
+      warning(OPT_Wall, "Disabled -foptimize-sibling-calls due to regparm clobber");
+      return false;
+  }
+
+  //warning(OPT_Wall, "decl=%qE exp=%qE, kind=%d", decl, exp, kind);
+  /* sorry("%qE", decl); */
+  /* sorry("%qE", TYPE_ATTRIBUTES(decl)); */
+  /* if(auto attr = lookup_attribute("aregparm", TYPE_ATTRIBUTES(decl))) { */
+  /*     sorry("got attr"); */
+  /*     //sorry("%qE", attr); */
+  /* } */
 
   kind = m68k_get_function_kind (current_function_decl);
   if (kind == m68k_fk_normal_function)
