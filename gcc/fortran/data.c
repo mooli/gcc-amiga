@@ -1,5 +1,5 @@
 /* Supporting functions for resolving DATA statement.
-   Copyright (C) 2002-2017 Free Software Foundation, Inc.
+   Copyright (C) 2002-2018 Free Software Foundation, Inc.
    Contributed by Lifang Zeng <zlf605@hotmail.com>
 
 This file is part of GCC.
@@ -104,11 +104,11 @@ static gfc_expr *
 create_character_initializer (gfc_expr *init, gfc_typespec *ts,
 			      gfc_ref *ref, gfc_expr *rvalue)
 {
-  int len, start, end, tlen;
+  HOST_WIDE_INT len, start, end, tlen;
   gfc_char_t *dest;
   bool alloced_init = false;
 	    
-  gfc_extract_int (ts->u.cl->length, &len);
+  gfc_extract_hwi (ts->u.cl->length, &len);
 
   if (init == NULL)
     {
@@ -143,10 +143,10 @@ create_character_initializer (gfc_expr *init, gfc_typespec *ts,
 	  return NULL;
 	}
 
-      gfc_extract_int (start_expr, &start);
+      gfc_extract_hwi (start_expr, &start);
       gfc_free_expr (start_expr);
       start--;
-      gfc_extract_int (end_expr, &end);
+      gfc_extract_hwi (end_expr, &end);
       gfc_free_expr (end_expr);
     }
   else
@@ -174,16 +174,15 @@ create_character_initializer (gfc_expr *init, gfc_typespec *ts,
       else
 	{
 	  gfc_warning_now (0, "Initialization string at %L was truncated to "
-			   "fit the variable (%d/%d)", &rvalue->where,
-			   tlen, len);
+			   "fit the variable (%ld/%ld)", &rvalue->where,
+			   (long) tlen, (long) len);
 	  len = tlen;
 	}
     }
 
   if (rvalue->ts.type == BT_HOLLERITH)
     {
-      int i;
-      for (i = 0; i < len; i++)
+      for (size_t i = 0; i < (size_t) len; i++)
 	dest[start+i] = rvalue->representation.string[i];
     }
   else
@@ -539,6 +538,7 @@ gfc_advance_section (mpz_t *section_index, gfc_array_ref *ar,
   mpz_t tmp; 
   bool forwards;
   int cmp;
+  gfc_expr *start, *end, *stride;
 
   for (i = 0; i < ar->dimen; i++)
     {
@@ -547,12 +547,16 @@ gfc_advance_section (mpz_t *section_index, gfc_array_ref *ar,
 
       if (ar->stride[i])
 	{
+	  stride = gfc_copy_expr(ar->stride[i]);
+	  if(!gfc_simplify_expr(stride, 1))
+	    gfc_internal_error("Simplification error");
 	  mpz_add (section_index[i], section_index[i],
-		   ar->stride[i]->value.integer);
-	if (mpz_cmp_si (ar->stride[i]->value.integer, 0) >= 0)
-	  forwards = true;
-	else
-	  forwards = false;
+		   stride->value.integer);
+	  if (mpz_cmp_si (stride->value.integer, 0) >= 0)
+	    forwards = true;
+	  else
+	    forwards = false;
+	  gfc_free_expr(stride);	
 	}
       else
 	{
@@ -561,7 +565,13 @@ gfc_advance_section (mpz_t *section_index, gfc_array_ref *ar,
 	}
       
       if (ar->end[i])
-	cmp = mpz_cmp (section_index[i], ar->end[i]->value.integer);
+        {
+	  end = gfc_copy_expr(ar->end[i]);
+	  if(!gfc_simplify_expr(end, 1))
+	    gfc_internal_error("Simplification error");
+	  cmp = mpz_cmp (section_index[i], end->value.integer);
+	  gfc_free_expr(end);	
+	}
       else
 	cmp = mpz_cmp (section_index[i], ar->as->upper[i]->value.integer);
 
@@ -569,7 +579,13 @@ gfc_advance_section (mpz_t *section_index, gfc_array_ref *ar,
 	{
 	  /* Reset index to start, then loop to advance the next index.  */
 	  if (ar->start[i])
-	    mpz_set (section_index[i], ar->start[i]->value.integer);
+	    {
+	      start = gfc_copy_expr(ar->start[i]);
+	      if(!gfc_simplify_expr(start, 1))
+	        gfc_internal_error("Simplification error");
+	      mpz_set (section_index[i], start->value.integer);
+	      gfc_free_expr(start); 
+	    }
 	  else
 	    mpz_set (section_index[i], ar->as->lower[i]->value.integer);
 	}
@@ -679,6 +695,7 @@ gfc_get_section_index (gfc_array_ref *ar, mpz_t *section_index, mpz_t *offset)
   int i;
   mpz_t delta;
   mpz_t tmp;
+  gfc_expr *start;
 
   mpz_set_si (*offset, 0);
   mpz_init (tmp);
@@ -692,11 +709,15 @@ gfc_get_section_index (gfc_array_ref *ar, mpz_t *section_index, mpz_t *offset)
 	case DIMEN_RANGE:
 	  if (ar->start[i])
 	    {
-	      mpz_sub (tmp, ar->start[i]->value.integer,
+	      start = gfc_copy_expr(ar->start[i]);
+	      if(!gfc_simplify_expr(start, 1))
+	        gfc_internal_error("Simplification error");
+	      mpz_sub (tmp, start->value.integer,
 		       ar->as->lower[i]->value.integer);
 	      mpz_mul (tmp, tmp, delta);
 	      mpz_add (*offset, tmp, *offset);
-	      mpz_set (section_index[i], ar->start[i]->value.integer);
+	      mpz_set (section_index[i], start->value.integer);
+	      gfc_free_expr(start);
 	    }
 	  else
 	      mpz_set (section_index[i], ar->as->lower[i]->value.integer);

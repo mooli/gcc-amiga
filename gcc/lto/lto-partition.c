@@ -1,5 +1,5 @@
 /* LTO partitioning logic routines.
-   Copyright (C) 2009-2017 Free Software Foundation, Inc.
+   Copyright (C) 2009-2018 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -33,7 +33,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "symbol-summary.h"
 #include "tree-vrp.h"
 #include "ipa-prop.h"
-#include "ipa-inline.h"
+#include "ipa-fnsummary.h"
 #include "lto-partition.h"
 
 vec<ltrans_partition> ltrans_partitions;
@@ -153,7 +153,7 @@ add_symbol_to_partition_1 (ltrans_partition part, symtab_node *node)
     {
       struct cgraph_edge *e;
       if (!node->alias)
-        part->insns += inline_summaries->get (cnode)->self_size;
+        part->insns += ipa_fn_summaries->get (cnode)->self_size;
 
       /* Add all inline clones and callees that are duplicated.  */
       for (e = cnode->callees; e; e = e->next_callee)
@@ -277,7 +277,7 @@ undo_partition (ltrans_partition partition, unsigned int n_nodes)
       partition->initializers_visited = NULL;
 
       if (!node->alias && (cnode = dyn_cast <cgraph_node *> (node)))
-        partition->insns -= inline_summaries->get (cnode)->self_size;
+        partition->insns -= ipa_fn_summaries->get (cnode)->self_size;
       lto_symtab_encoder_delete_node (partition->encoder, node);
       node->aux = (void *)((size_t)node->aux - 1);
     }
@@ -480,7 +480,7 @@ lto_balanced_map (int n_lto_partitions, int max_partition_size)
 	else
 	  order[n_nodes++] = node;
 	if (!node->alias)
-	  total_size += inline_summaries->get (node)->size;
+	  total_size += ipa_fn_summaries->get (node)->size;
       }
 
   original_total_size = total_size;
@@ -506,7 +506,7 @@ lto_balanced_map (int n_lto_partitions, int max_partition_size)
   /* Collect all variables that should not be reordered.  */
   FOR_EACH_VARIABLE (vnode)
     if (vnode->get_partitioning_class () == SYMBOL_PARTITION
-	&& (!flag_toplevel_reorder || vnode->no_reorder))
+	&& vnode->no_reorder)
       varpool_order.safe_push (vnode);
   n_varpool_nodes = varpool_order.length ();
   varpool_order.qsort (varpool_node_cmp);
@@ -542,14 +542,15 @@ lto_balanced_map (int n_lto_partitions, int max_partition_size)
 	     && noreorder[noreorder_pos]->order < current_order)
 	{
 	  if (!noreorder[noreorder_pos]->alias)
-	    total_size -= inline_summaries->get (noreorder[noreorder_pos])->size;
+	    total_size -= ipa_fn_summaries->get (noreorder[noreorder_pos])->size;
 	  next_nodes.safe_push (noreorder[noreorder_pos++]);
 	}
       add_sorted_nodes (next_nodes, partition);
 
-      add_symbol_to_partition (partition, order[i]);
+      if (!symbol_partitioned_p (order[i]))
+        add_symbol_to_partition (partition, order[i]);
       if (!order[i]->alias)
-        total_size -= inline_summaries->get (order[i])->size;
+        total_size -= ipa_fn_summaries->get (order[i])->size;
 	  
 
       /* Once we added a new node to the partition, we also want to add
@@ -586,7 +587,7 @@ lto_balanced_map (int n_lto_partitions, int max_partition_size)
 	      for (edge = node->callees; edge; edge = edge->next_callee)
 		if (edge->callee->definition)
 		  {
-		    int edge_cost = edge->frequency;
+		    int edge_cost = edge->frequency ();
 		    int index;
 
 		    if (!edge_cost)
@@ -602,7 +603,7 @@ lto_balanced_map (int n_lto_partitions, int max_partition_size)
 		  }
 	      for (edge = node->callers; edge; edge = edge->next_caller)
 		{
-		  int edge_cost = edge->frequency;
+		  int edge_cost = edge->frequency ();
 		  int index;
 
 		  gcc_assert (edge->caller->definition);
@@ -634,7 +635,7 @@ lto_balanced_map (int n_lto_partitions, int max_partition_size)
 		vnode = dyn_cast <varpool_node *> (ref->referred);
 		if (!vnode->definition)
 		  continue;
-		if (!symbol_partitioned_p (vnode) && flag_toplevel_reorder
+		if (!symbol_partitioned_p (vnode)
 		    && !vnode->no_reorder
 		    && vnode->get_partitioning_class () == SYMBOL_PARTITION)
 		  add_symbol_to_partition (partition, vnode);
@@ -672,7 +673,7 @@ lto_balanced_map (int n_lto_partitions, int max_partition_size)
 		   because it allows them to be removed.  Coupling
 		   with objects they refer to only helps to reduce
 		   number of symbols promoted to hidden.  */
-		if (!symbol_partitioned_p (vnode) && flag_toplevel_reorder
+		if (!symbol_partitioned_p (vnode)
 		    && !vnode->no_reorder
 		    && !vnode->can_remove_if_no_refs_p ()
 		    && vnode->get_partitioning_class () == SYMBOL_PARTITION)
@@ -756,7 +757,8 @@ lto_balanced_map (int n_lto_partitions, int max_partition_size)
 	  if (npartitions < n_lto_partitions)
 	    partition_size = total_size / (n_lto_partitions - npartitions);
 	  else
-	    partition_size = INT_MAX;
+	    /* Watch for overflow.  */
+	    partition_size = INT_MAX / 16;
 
 	  if (partition_size < PARAM_VALUE (MIN_PARTITION_SIZE))
 	    partition_size = PARAM_VALUE (MIN_PARTITION_SIZE);
@@ -767,14 +769,10 @@ lto_balanced_map (int n_lto_partitions, int max_partition_size)
   next_nodes.truncate (0);
 
   /* Varables that are not reachable from the code go into last partition.  */
-  if (flag_toplevel_reorder)
-    {
-      FOR_EACH_VARIABLE (vnode)
-	if (vnode->get_partitioning_class () == SYMBOL_PARTITION
-	    && !symbol_partitioned_p (vnode)
-	    && !vnode->no_reorder)
-	  next_nodes.safe_push (vnode);
-    }
+  FOR_EACH_VARIABLE (vnode)
+    if (vnode->get_partitioning_class () == SYMBOL_PARTITION
+	&& !symbol_partitioned_p (vnode))
+      next_nodes.safe_push (vnode);
 
   /* Output remaining ordered symbols.  */
   while (varpool_pos < n_varpool_nodes)
