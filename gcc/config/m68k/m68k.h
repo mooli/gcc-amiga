@@ -323,7 +323,7 @@ along with GCC; see the file COPYING3.  If not see
    and the 68881 floating point registers numbers 020-027 (16-23).
    We also have a fake `arg-pointer' register 030 (24) used for
    register elimination.  */
-#define FIRST_PSEUDO_REGISTER 26
+#define FIRST_PSEUDO_REGISTER 25
 
 /* All m68k targets (except AmigaOS) use %a5 as the PIC register  */
 #define PIC_OFFSET_TABLE_REGNUM				\
@@ -346,8 +346,8 @@ along with GCC; see the file COPYING3.  If not see
      (if available).  */       \
   0, 0, 0, 0, 0, 0, 0, 0,      \
                                \
-  /* Arg pointer; dummy. */    \
-  1, 1 }
+  /* Arg pointer.  */          \
+  1 }
 
 /* 1 for registers not available across function calls.
    These must include the FIXED_REGISTERS and also any
@@ -366,8 +366,8 @@ along with GCC; see the file COPYING3.  If not see
      (if available).  */        \
   1, 1, 0, 0, 0, 0, 0, 0,       \
                                 \
-  /* Arg pointer; dummy. */     \
-  1, 1 }
+  /* Arg pointer.  */           \
+  1 }
 
 #define REG_ALLOC_ORDER		\
 { /* d0/d1/a0/a1 */		\
@@ -415,7 +415,7 @@ along with GCC; see the file COPYING3.  If not see
 /* Most m68k targets use %a6 as a frame pointer.  The AmigaOS
    ABI uses %a6 for shared library calls, therefore the frame
    pointer is shifted to %a5 on this target.  */
-#define FRAME_POINTER_REGNUM FRAME_REG
+#define FRAME_POINTER_REGNUM A4_REG
 
 /* Base register for access to arguments of the function.
  * This isn't a hardware register. It will be eliminated to the
@@ -759,8 +759,7 @@ do { if (cc_prev_status.flags & CC_IN_68881)			\
  REGISTER_PREFIX"a6", REGISTER_PREFIX"sp",			\
  REGISTER_PREFIX"fp0", REGISTER_PREFIX"fp1", REGISTER_PREFIX"fp2", \
  REGISTER_PREFIX"fp3", REGISTER_PREFIX"fp4", REGISTER_PREFIX"fp5", \
- REGISTER_PREFIX"fp6", REGISTER_PREFIX"fp7", REGISTER_PREFIX"argptr", \
- REGISTER_PREFIX"frameptr" }
+ REGISTER_PREFIX"fp6", REGISTER_PREFIX"fp7", REGISTER_PREFIX"argptr" }
 
 #define M68K_FP_REG_NAME REGISTER_PREFIX"fp"
 
