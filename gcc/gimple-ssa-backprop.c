@@ -1,5 +1,5 @@
 /* Back-propagation of usage information to definitions.
-   Copyright (C) 2015-2017 Free Software Foundation, Inc.
+   Copyright (C) 2015-2018 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -188,7 +188,7 @@ static void
 dump_usage_prefix (FILE *file, tree var)
 {
   fprintf (file, "  ");
-  print_generic_expr (file, var, 0);
+  print_generic_expr (file, var);
   fprintf (file, ": ");
 }
 
@@ -309,7 +309,7 @@ backprop::push_to_worklist (tree var)
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
       fprintf (dump_file, "[WORKLIST] Pushing ");
-      print_generic_expr (dump_file, var, 0);
+      print_generic_expr (dump_file, var);
       fprintf (dump_file, "\n");
     }
 }
@@ -325,7 +325,7 @@ backprop::pop_from_worklist ()
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
       fprintf (dump_file, "[WORKLIST] Popping ");
-      print_generic_expr (dump_file, var, 0);
+      print_generic_expr (dump_file, var);
       fprintf (dump_file, "\n");
     }
   return var;
@@ -354,6 +354,7 @@ backprop::process_builtin_call_use (gcall *call, tree rhs, usage_info *info)
       break;
 
     CASE_CFN_COPYSIGN:
+    CASE_CFN_COPYSIGN_FN:
       /* The sign of the first input is ignored.  */
       if (rhs != gimple_call_arg (call, 1))
 	info->flags.ignore_sign = true;
@@ -373,6 +374,7 @@ backprop::process_builtin_call_use (gcall *call, tree rhs, usage_info *info)
       }
 
     CASE_CFN_FMA:
+    CASE_CFN_FMA_FN:
       /* In X * X + Y, where Y is distinct from X, the sign of X doesn't
 	 matter.  */
       if (gimple_call_arg (call, 0) == rhs
@@ -469,7 +471,7 @@ backprop::process_use (gimple *stmt, tree rhs, usage_info *info)
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
       fprintf (dump_file, "[USE] ");
-      print_generic_expr (dump_file, rhs, 0);
+      print_generic_expr (dump_file, rhs);
       fprintf (dump_file, " in ");
       print_gimple_stmt (dump_file, stmt, 0, TDF_SLIM);
     }
@@ -507,7 +509,7 @@ backprop::intersect_uses (tree var, usage_info *info)
 	  if (dump_file && (dump_flags & TDF_DETAILS))
 	    {
 	      fprintf (dump_file, "[BACKEDGE] ");
-	      print_generic_expr (dump_file, var, 0);
+	      print_generic_expr (dump_file, var);
 	      fprintf (dump_file, " in ");
 	      print_gimple_stmt (dump_file, stmt, 0, TDF_SLIM);
 	    }
@@ -658,9 +660,9 @@ static void
 note_replacement (gimple *stmt, tree old_rhs, tree new_rhs)
 {
   fprintf (dump_file, "Replacing use of ");
-  print_generic_expr (dump_file, old_rhs, 0);
+  print_generic_expr (dump_file, old_rhs);
   fprintf (dump_file, " with ");
-  print_generic_expr (dump_file, new_rhs, 0);
+  print_generic_expr (dump_file, new_rhs);
   fprintf (dump_file, " in ");
   print_gimple_stmt (dump_file, stmt, 0, TDF_SLIM);
 }
@@ -689,6 +691,7 @@ strip_sign_op_1 (tree rhs)
     switch (gimple_call_combined_fn (call))
       {
       CASE_CFN_COPYSIGN:
+      CASE_CFN_COPYSIGN_FN:
 	return gimple_call_arg (call, 0);
 
       default:
@@ -726,7 +729,7 @@ strip_sign_op (tree rhs)
 void
 backprop::prepare_change (tree var)
 {
-  if (MAY_HAVE_DEBUG_STMTS)
+  if (MAY_HAVE_DEBUG_BIND_STMTS)
     insert_debug_temp_for_var_def (NULL, var);
   reset_flow_sensitive_info (var);
 }

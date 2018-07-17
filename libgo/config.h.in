@@ -114,6 +114,9 @@
 /* Define to 1 if you have the <linux/netlink.h> header file. */
 #undef HAVE_LINUX_NETLINK_H
 
+/* Define to 1 if you have the <linux/ptrace.h> header file. */
+#undef HAVE_LINUX_PTRACE_H
+
 /* Define to 1 if you have the <linux/reboot.h> header file. */
 #undef HAVE_LINUX_REBOOT_H
 
@@ -258,6 +261,9 @@
 
 /* Define to 1 if you have the `sync_file_range' function. */
 #undef HAVE_SYNC_FILE_RANGE
+
+/* Define to 1 if you have the `syscall' function. */
+#undef HAVE_SYSCALL
 
 /* Define to 1 if you have the <syscall.h> header file. */
 #undef HAVE_SYSCALL_H
