@@ -129,7 +129,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GCC 1"
-.TH GCC 1 "2018-05-02" "gcc-8.1.0" "GNU"
+.TH GCC 1 "2018-07-26" "gcc-8.2.0" "GNU"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -345,7 +345,7 @@ in the following sections.
 \&\-Wswitch\-unreachable  \-Wsync\-nand 
 \&\-Wsystem\-headers  \-Wtautological\-compare  \-Wtrampolines  \-Wtrigraphs 
 \&\-Wtype\-limits  \-Wundef 
-\&\-Wuninitialized  \-Wunknown\-pragmas  \-Wunsafe\-loop\-optimizations 
+\&\-Wuninitialized  \-Wunknown\-pragmas 
 \&\-Wunsuffixed\-float\-constants  \-Wunused  \-Wunused\-function 
 \&\-Wunused\-label  \-Wunused\-local\-typedefs  \-Wunused\-macros 
 \&\-Wunused\-parameter  \-Wno\-unused\-result 
@@ -2359,6 +2359,15 @@ the same name within a function, that are declared in different scopes,
 the mangling now changes starting with the twelfth occurrence.  It also
 implies \fB\-fnew\-inheriting\-ctors\fR.
 .Sp
+Version 12, which first appeared in G++ 8, corrects the calling
+conventions for empty classes on the x86_64 target and for classes
+with only deleted copy/move constructors.  It accidentally changes the
+calling convention for classes with a deleted copy constructor and a
+trivial move constructor.
+.Sp
+Version 13, which first appeared in G++ 8.2, fixes the accidental
+change in version 12.
+.Sp
 See also \fB\-Wabi\fR.
 .IP "\fB\-fabi\-compat\-version=\fR\fIn\fR" 4
 .IX Item "-fabi-compat-version=n"
@@ -2367,7 +2376,7 @@ works around mangling changes by creating an alias with the correct
 mangled name when defining a symbol with an incorrect mangled name.
 This switch specifies which \s-1ABI\s0 version to use for the alias.
 .Sp
-With \fB\-fabi\-version=0\fR (the default), this defaults to 8 (\s-1GCC 5\s0
+With \fB\-fabi\-version=0\fR (the default), this defaults to 11 (\s-1GCC 7\s0
 compatibility).  If another \s-1ABI\s0 version is explicitly selected, this
 defaults to 0.  For compatibility with \s-1GCC\s0 versions 3.2 through 4.9,
 use \fB\-fabi\-compat\-version=2\fR.
@@ -3767,6 +3776,7 @@ Options\fR and \fBObjective-C and Objective\-\*(C+ Dialect Options\fR.
 \&\-Wsizeof\-pointer\-memaccess 
 \&\-Wstrict\-aliasing  
 \&\-Wstrict\-overflow=1  
+\&\-Wstringop\-truncation  
 \&\-Wswitch  
 \&\-Wtautological\-compare  
 \&\-Wtrigraphs  
@@ -5073,6 +5083,8 @@ however, are not suitable arguments to functions that expect
 \&\f(CW\*(C`NUL\*(C'\fR\-terminated strings.  To help detect accidental misuses of
 such arrays \s-1GCC\s0 issues warnings unless it can prove that the use is
 safe.
+.Sp
+Option \fB\-Wstringop\-truncation\fR is enabled by \fB\-Wall\fR.
 .IP "\fB\-Wsuggest\-attribute=\fR[\fBpure\fR|\fBconst\fR|\fBnoreturn\fR|\fBformat\fR|\fBcold\fR|\fBmalloc\fR]" 4
 .IX Item "-Wsuggest-attribute=[pure|const|noreturn|format|cold|malloc]"
 Warn for cases where adding an attribute may be beneficial. The
@@ -5171,6 +5183,9 @@ precision would exceed \f(CW\*(C`SIZE_MAX / 2\*(C'\fR.  The option argument \fIn
 may end in one of the standard suffixes designating a multiple of bytes
 such as \f(CW\*(C`kB\*(C'\fR and \f(CW\*(C`KiB\*(C'\fR for kilobyte and kibibyte, respectively,
 \&\f(CW\*(C`MB\*(C'\fR and \f(CW\*(C`MiB\*(C'\fR for megabyte and mebibyte, and so on.
+\&\fB\-Walloc\-size\-larger\-than=\fR\fI\s-1PTRDIFF_MAX\s0\fR is enabled by default.
+Warnings controlled by the option can be disabled by specifying \fIn\fR
+of \fI\s-1SIZE_MAX\s0\fR or more.
 .IP "\fB\-Walloca\fR" 4
 .IX Item "-Walloca"
 This option warns on all uses of \f(CW\*(C`alloca\*(C'\fR in the source.
@@ -5585,12 +5600,6 @@ If the stack usage is (partly) dynamic and not bounded, it's:
 .RE
 .RS 4
 .RE
-.IP "\fB\-Wunsafe\-loop\-optimizations\fR" 4
-.IX Item "-Wunsafe-loop-optimizations"
-Warn if the loop cannot be optimized because the compiler cannot
-assume anything on the bounds of the loop indices.  With
-\&\fB\-funsafe\-loop\-optimizations\fR warn if the compiler makes
-such assumptions.
 .IP "\fB\-Wno\-pedantic\-ms\-format\fR (MinGW targets only)" 4
 .IX Item "-Wno-pedantic-ms-format (MinGW targets only)"
 When used in combination with \fB\-Wformat\fR
@@ -8218,6 +8227,13 @@ is transformed to
 \&            for (int j = 0; j < N; j++)
 \&              c[i][j] = c[i][j] + a[i][k]*b[k][j];
 .Ve
+.Sp
+This flag is enabled by default at \fB\-O3\fR.
+.IP "\fB\-floop\-unroll\-and\-jam\fR" 4
+.IX Item "-floop-unroll-and-jam"
+Apply unroll and jam transformations on feasible loops.  In a loop
+nest this unrolls the outer loop by some factor and fuses the resulting
+multiple inner loops.  This flag is enabled by default at \fB\-O3\fR.
 .IP "\fB\-ftree\-loop\-im\fR" 4
 .IX Item "-ftree-loop-im"
 Perform loop invariant motion on trees.  This pass moves only invariants that
@@ -9324,11 +9340,6 @@ for one side of the iteration space and false for the other.
 .IX Item "-funswitch-loops"
 Move branches with loop invariant conditions out of the loop, with duplicates
 of the loop on both branches (modified according to result of the condition).
-.IP "\fB\-floop\-unroll\-and\-jam\fR" 4
-.IX Item "-floop-unroll-and-jam"
-Apply unroll and jam transformations on feasible loops.  In a loop
-nest this unrolls the outer loop by some factor and fuses the resulting
-multiple inner loops.
 .IP "\fB\-ffunction\-sections\fR" 4
 .IX Item "-ffunction-sections"
 .PD 0

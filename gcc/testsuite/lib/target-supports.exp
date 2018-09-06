@@ -2523,6 +2523,22 @@ proc check_effective_target_next_runtime { } {
     }]
 }
 
+# Return 1 if we're generating code for big-endian memory order.
+
+proc check_effective_target_be { } {
+    return [check_no_compiler_messages be object {
+	int dummy[__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__ ? 1 : -1];
+    }]
+}
+
+# Return 1 if we're generating code for little-endian memory order.
+
+proc check_effective_target_le { } {
+    return [check_no_compiler_messages le object {
+	int dummy[__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ ? 1 : -1];
+    }]
+}
+
 # Return 1 if we're generating 32-bit code using default options, 0
 # otherwise.
 
@@ -6589,7 +6605,7 @@ proc check_effective_target_vect_load_lanes { } {
     } else {
 	set et_vect_load_lanes 0
 	# We don't support load_lanes correctly on big-endian arm.
-	if { ([istarget arm-*-*] && [check_effective_target_arm_neon_ok])
+	if { ([check_effective_target_arm_little_endian] && [check_effective_target_arm_neon_ok])
 	     || [istarget aarch64*-*-*] } {
 	    set et_vect_load_lanes 1
 	}

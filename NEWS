@@ -8,7 +8,21 @@ see ONEWS.
 http://gcc.gnu.org/gcc-8/index.html
                               GCC 8 Release Series
 
-   As of this time no releases of GCC 8 have yet been made.
+   Jul 26, 2018
+
+   The [1]GNU project and the GCC developers are pleased to announce the
+   release of GCC 8.2.
+
+   This release is a bug-fix release, containing fixes for regressions in
+   GCC 8.1 relative to previous releases of GCC.
+
+Release History
+
+   GCC 8.2
+          Jul 14, 2017 ([2]changes, [3]documentation)
+
+   GCC 8.1
+          May 2, 2018 ([4]changes, [5]documentation)
 
 References and Acknowledgements
 
@@ -16,49 +30,54 @@ References and Acknowledgements
    supports several other languages aside from C, it now stands for the
    GNU Compiler Collection.
 
-   A list of [1]successful builds is updated as new information becomes
+   A list of [6]successful builds is updated as new information becomes
    available.
 
    The GCC developers would like to thank the numerous people that have
    contributed new features, improvements, bug fixes, and other changes as
-   well as test results to GCC. This [2]amazing group of volunteers is
+   well as test results to GCC. This [7]amazing group of volunteers is
    what makes GCC successful.
 
-   For additional information about GCC please refer to the [3]GCC project
-   web site or contact the [4]GCC development mailing list.
+   For additional information about GCC please refer to the [8]GCC project
+   web site or contact the [9]GCC development mailing list.
 
-   To obtain GCC please use [5]our mirror sites or [6]our SVN server.
+   To obtain GCC please use [10]our mirror sites or [11]our SVN server.
 
 
     For questions related to the use of GCC, please consult these web
-    pages and the [7]GCC manuals. If that fails, the
-    [8]gcc-help@gcc.gnu.org mailing list might help. Comments on these
+    pages and the [12]GCC manuals. If that fails, the
+    [13]gcc-help@gcc.gnu.org mailing list might help. Comments on these
     web pages and the development of GCC are welcome on our developer
-    list at [9]gcc@gcc.gnu.org. All of [10]our lists have public
+    list at [14]gcc@gcc.gnu.org. All of [15]our lists have public
     archives.
 
-   Copyright (C) [11]Free Software Foundation, Inc. Verbatim copying and
+   Copyright (C) [16]Free Software Foundation, Inc. Verbatim copying and
    distribution of this entire article is permitted in any medium,
    provided this notice is preserved.
 
-   These pages are [12]maintained by the GCC team. Last modified
-   2018-04-25[13].
+   These pages are [17]maintained by the GCC team. Last modified
+   2018-07-26[18].
 
 References
 
-   1. http://gcc.gnu.org/gcc-8/buildstat.html
-   2. http://gcc.gnu.org/onlinedocs/gcc/Contributors.html
-   3. http://gcc.gnu.org/index.html
-   4. mailto:gcc@gcc.gnu.org
-   5. http://gcc.gnu.org/mirrors.html
-   6. http://gcc.gnu.org/svn.html
-   7. https://gcc.gnu.org/onlinedocs/
-   8. mailto:gcc-help@gcc.gnu.org
+   1. http://www.gnu.org/
+   2. http://gcc.gnu.org/gcc-8/changes.html
+   3. http://gcc.gnu.org/onlinedocs/8.2.0/
+   4. http://gcc.gnu.org/gcc-8/changes.html
+   5. http://gcc.gnu.org/onlinedocs/8.1.0/
+   6. http://gcc.gnu.org/gcc-8/buildstat.html
+   7. http://gcc.gnu.org/onlinedocs/gcc-8.1.0/gcc/Contributors.html
+   8. http://gcc.gnu.org/index.html
    9. mailto:gcc@gcc.gnu.org
-  10. https://gcc.gnu.org/lists.html
-  11. https://www.fsf.org/
-  12. https://gcc.gnu.org/about.html
-  13. http://validator.w3.org/check/referer
+  10. http://gcc.gnu.org/mirrors.html
+  11. http://gcc.gnu.org/svn.html
+  12. https://gcc.gnu.org/onlinedocs/
+  13. mailto:gcc-help@gcc.gnu.org
+  14. mailto:gcc@gcc.gnu.org
+  15. https://gcc.gnu.org/lists.html
+  16. https://www.fsf.org/
+  17. https://gcc.gnu.org/about.html
+  18. http://validator.w3.org/check/referer
 ======================================================================
 http://gcc.gnu.org/gcc-8/changes.html
                               GCC 8 Release Series
@@ -67,9 +86,6 @@ http://gcc.gnu.org/gcc-8/changes.html
    This page is a "brief" summary of some of the huge number of
    improvements in GCC 8. You may also want to check out our [1]Porting to
    GCC 8 page and the [2]full GCC documentation.
-
-Disclaimer: GCC 8 has not been released yet, so this document is a
-work-in-progress.
 
 Caveats
 
@@ -160,6 +176,7 @@ General Improvements
        the same entity. For example, because the noreturn attribute on the
        second declaration below is mutually exclusive with the malloc
        attribute on the first, it is ignored and a warning is issued.
+>
       void* __attribute__ ((malloc)) f (unsigned);
       void* __attribute__ ((noreturn)) f (unsigned);
 
@@ -266,6 +283,13 @@ SUMMARY: AddressSanitizer: invalid-pointer-pair /tmp/pointer-compare.c:7 in main
        time invalid arguments to __builtin_clz or __builtin_ctz prefixed
        builtins, and -fsanitize=pointer-overflow which performs cheap run
        time tests for pointer wrapping.
+     * New no_sanitize attribute has been added. The attribute on
+       functions is used to inform the compiler that it should not do
+       sanitization of all options mentioned in sanitize option. A list of
+       values acceptable by -fsanitize option can be provided.
+
+void __attribute__ ((no_sanitize ("alignment", "object-size")))
+f () { /* Do something. */; }
 
 New Languages and Language specific improvements
 
@@ -323,12 +347,12 @@ New Languages and Language specific improvements
             destination unchanged. For example, the following call to
             strncat is diagnosed because it appends just three of the four
             characters from the source string.
-            void append (char *buf, size_t bufsize)
-            {
-                strncat (buf, ".txt", 3);
-            }
-            warning: 'strncat' output truncated copying 3 bytes from a string of
- length 4 [-Wstringop-truncation]
+void append (char *buf, size_t bufsize)
+{
+    strncat (buf, ".txt", 3);
+}
+warning: 'strncat' output truncated copying 3 bytes from a string of length 4 [-
+Wstringop-truncation]
             Similarly, in the following example, the call to strncpy
             specifies the size of the destination buffer as the bound. If
             the length of the source string is equal to or greater than
@@ -336,14 +360,14 @@ New Languages and Language specific improvements
             Therefore, the call is also diagnosed. To avoid the warning,
             specify sizeof buf - 1 as the bound and set the last element
             of the buffer to NUL.
-            void copy (const char *s)
-            {
-                char buf[80];
-                strncpy (buf, s, sizeof buf);
-                …
-            }
-            warning: 'strncpy' specified bound 80 equals destination size [-Wstr
-ingop-truncation]
+void copy (const char *s)
+{
+    char buf[80];
+    strncpy (buf, s, sizeof buf);
+    …
+}
+warning: 'strncpy' specified bound 80 equals destination size [-Wstringop-trunca
+tion]
             The -Wstringop-truncation option is included in -Wall.
             Note that due to GCC bug [6]82944, defining strncat, strncpy,
             or stpncpy as a macro in a system header as some
@@ -367,15 +391,14 @@ ingop-truncation]
             specified alignment greater than 1. Such a member will wind up
             under-aligned. For example, a warning will be issued for the
             definition of struct A in the following:
-            struct __attribute__ ((aligned (8)))
-            S8 { char a[8]; };
+struct __attribute__ ((aligned (8)))
+S8 { char a[8]; };
 
-            struct __attribute__ ((packed)) A
-            {
-                struct S8 s8;
-            };
-            warning: alignment 1 of 'struct S' is less than 8 [-Wpacked-not-alig
-ned]
+struct __attribute__ ((packed)) A
+{
+    struct S8 s8;
+};
+warning: alignment 1 of 'struct S' is less than 8 [-Wpacked-not-aligned]
             The -Wpacked-not-aligned option is included in -Wall.
           + -Wcast-function-type warns when a function pointer is cast to
             an incompatible function pointer. This warning is enabled by
@@ -410,12 +433,14 @@ ned]
        by replacing its initial characters with the last four. However,
        because the function writes the terminating NUL into a[4], the
        copies overlap and the call is diagnosed.
-        void f (void)
-        {
-            char a[] = "abcd1234";
-            strcpy (a, a + 4);
-            …
-        }
+void f (void)
+{
+    char a[] = "abcd1234";
+    strcpy (a, a + 4);
+    …
+}
+warning: 'strcpy' accessing 5 bytes at offsets 0 and 4 overlaps 1 byte at offset
+ 4 [-Wrestrict]
        The -Wrestrict option is included in -Wall.
      * Several optimizer enhancements have enabled improvements to the
        [13]-Wformat-overflow and [14]-Wformat-truncation options. The
@@ -501,6 +526,23 @@ unclosed-2.c:8:45: error: expected ')' before '{' token
 
   C++
 
+     * GCC 8 (-fabi-version=12) has a couple of corrections to the calling
+       convention, which changes the ABI for some uncommon code:
+          + Passing an empty class as an argument now takes up no space on
+            x86_64, as required by the psABI.
+          + Passing or returning a class with only deleted copy and move
+            constructors now uses the same calling convention as a class
+            with a non-trivial copy or move constructor. This only affects
+            C++17 mode, as in earlier standards passing or returning such
+            a class was impossible.
+          + WARNING: In GCC 8.1 the second change mistakenly also affects
+            classes with a deleted copy constructor and defaulted trivial
+            move constructor (bug [15]c++/86094). This issue is fixed in
+            GCC 8.2 (-fabi-version=13).
+       You can test whether these changes affect your code with -Wabi=11
+       (or -Wabi=12 in GCC 8.2 for the third issue); if these changes are
+       problematic for your project, the GCC 7 ABI can be selected with
+       -fabi-version=11.
      * The value of the C++11 alignof operator has been corrected to match
        C _Alignof (minimum alignment) rather than GNU __alignof__
        (preferred alignment); on ia32 targets this means that
@@ -508,7 +550,7 @@ unclosed-2.c:8:45: error: expected ')' before '{' token
        preferred alignment should use __alignof__ instead.
      * New command-line options have been added for the C++ compiler to
        control warnings:
-          + [15]-Wclass-memaccess warns when objects of non-trivial class
+          + [16]-Wclass-memaccess warns when objects of non-trivial class
             types are manipulated in potentially unsafe ways by raw memory
             functions such as memcpy, or realloc. The warning helps detect
             calls that bypass user-defined constructors or copy-assignment
@@ -527,7 +569,7 @@ o trivial copy-assignment [-Wclass-memaccess]
        including designated initializers, default member initializers for
        bit-fields, __VA_OPT__ (except that #__VA_OPT__ is unsupported),
        lambda [=, this] captures, etc. For a full list of new features,
-       see [16]the C++ status page.
+       see [17]the C++ status page.
      * When reporting on attempts to access private fields of a class or
        struct, the C++ compiler will now offer fix-it hints showing how to
        use an accessor function to get at the field in question, if one
@@ -732,6 +774,9 @@ ctor<double> >()' from 'map<map<int,vector<double>>,vector<double>>' to 'map<map
        for all procedures with character arguments on 64-bit targets, as
        the type of the hidden character length argument has changed. The
        hidden character length argument is now of type INTEGER(C_SIZE_T).
+     * Partial support is provided for Fortran 2018 teams, which are
+       hierarchical subsets of images that execute independently of other
+       image subsets.
 
   Go
 
@@ -747,13 +792,13 @@ ctor<double> >()' from 'map<map<int,vector<double>>,vector<double>>' to 'map<map
 libgccjit
 
    The libgccjit API gained four new entry points:
-     * [17]gcc_jit_type_get_vector and
-     * [18]gcc_jit_context_new_rvalue_from_vector for working with
+     * [18]gcc_jit_type_get_vector and
+     * [19]gcc_jit_context_new_rvalue_from_vector for working with
        vectors,
-     * [19]gcc_jit_type_get_aligned
-     * [20]gcc_jit_function_get_address
+     * [20]gcc_jit_type_get_aligned
+     * [21]gcc_jit_function_get_address
 
-   The C code generated by [21]gcc_jit_context_dump_reproducer_to_file is
+   The C code generated by [22]gcc_jit_context_dump_reproducer_to_file is
    now easier-to-read.
 
 New Targets and Target Specific Improvements
@@ -843,7 +888,7 @@ New Targets and Target Specific Improvements
        arguments as -mcpu but only the CPU name has an effect on tuning.
        The architecture extensions do not have any effect. For details of
        what extensions a particular architecture or CPU option supports
-       please refer to the [22]documentation.
+       please refer to the [23]documentation.
      * The -mstructure-size-boundary option has been deprecated and will
        be removed in a future release.
      * The default link behavior for Armv6 and Armv7-R targets has been
@@ -892,21 +937,21 @@ New Targets and Target Specific Improvements
      ATtiny212, ATtiny214, ATtiny412, ATtiny414, ATtiny416, ATtiny417,
      ATtiny814, ATtiny816, ATtiny817, ATtiny1614, ATtiny1616, ATtiny1617,
      ATtiny3214, ATtiny3216, ATtiny3217
-       The new devices are listed under [23]-mmcu=avrxmega3.
+       The new devices are listed under [24]-mmcu=avrxmega3.
           + These devices see flash memory in the RAM address space, so
             that features like PROGMEM and __flash are not needed any more
             (as opposed to other AVR families for which read-only data
             will be located in RAM except special, non-standard features
             are used to locate and access such data). This requires that
             the compiler is used with Binutils 2.29 or newer so that
-            [24]read-only data will be located in flash memory.
+            [25]read-only data will be located in flash memory.
           + A new command-line option -mshort-calls is supported. This
             option is used internally for multilib selection of the
             avrxmega3 variants. It is not an optimization option. Do not
             set it by hand.
-     * The compiler now generates [25]efficient interrupt service routine
+     * The compiler now generates [26]efficient interrupt service routine
        (ISR) prologues and epilogues. This is achieved by using the new
-       [26]AVR pseudo instruction __gcc_isr which is supported and
+       [27]AVR pseudo instruction __gcc_isr which is supported and
        resolved by the GNU assembler.
           + As the __gcc_isr pseudo-instruction will be resolved by the
             assembler, inline assembly is transparent to the process. This
@@ -921,12 +966,12 @@ New Targets and Target Specific Improvements
           + The feature is turned on per default for all optimization
             levels except for -O0 and -Og. It is explicitly enabled by
             means of option -mgas-isr-prologues.
-          + Support has been added for a new [27]AVR function attribute
+          + Support has been added for a new [28]AVR function attribute
             no_gccisr. It can be used to disable __gcc_isr pseudo
             instruction generation for individual ISRs.
           + This optimization is only available if GCC is configured with
             GNU Binutils 2.29 or newer; or at least with a version of
-            Binutils that implements feature [28]PR21683.
+            Binutils that implements feature [29]PR21683.
      * The compiler no more saves / restores registers in main; the effect
        is the same as if attribute OS_task was specified for main. This
        optimization can be switched off by the new command-line option
@@ -941,14 +986,12 @@ New Targets and Target Specific Improvements
      * GCC now supports the Intel CPU named Cannonlake through
        -march=cannonlake. The switch enables the AVX512VBMI, AVX512IFMA
        and SHA ISA extensions.
-     * GCC now supports the Intel CPU named and Icelake through
+     * GCC now supports the Intel CPU named Icelake through
        -march=icelake. The switch enables the AVX512VNNI, GFNI, VAES,
        AVX512VBMI2, VPCLMULQDQ, AVX512BITALG, RDPID and AVX512VPOPCNTDQ
        ISA extensions.
      * GCC now supports the Intel Control-flow Enforcement Technology
-       (CET) extension through -mibt, -mshstk, -mcet options. One of these
-       options has to accompany the -fcf-protection option to enable code
-       instrumentation for control-flow protection.
+       (CET) extension through -fcf-protection option.
 
   NDS32
 
@@ -1015,24 +1058,57 @@ Improvements for plugin authors
      * The API for creating fix-it hints now supports newlines, and for
        emitting mutually incompatible fix-it hints for one diagnostic.
 
-Other significant improvements
+GCC 8.1
 
-     *
+   This is the [30]list of problem reports (PRs) from GCC's bug tracking
+   system that are known to be fixed in the 8.1 release. This list might
+   not be complete (that is, it is possible that some PRs that have been
+   fixed are not listed here).
+
+GCC 8.2
+
+   This is the [31]list of problem reports (PRs) from GCC's bug tracking
+   system that are known to be fixed in the 8.2 release. This list might
+   not be complete (that is, it is possible that some PRs that have been
+   fixed are not listed here).
+
+  General Improvements
+
+     * Fixed LTO link-time performance problems caused by an overflow in
+       the partitioning algorithm while building large binaries.
+
+  Language Specific Changes
+
+    C++
+
+   GCC 8.2 fixed a bug introduced in GCC 8.1 affecting passing or
+   returning of classes with a deleted copy constructor and defaulted
+   trivial move constructor (bug [32]c++/86094). GCC 8.2 introduces
+   -fabi-version=13 and makes it the default, ABI incompatibilities
+   between GCC 8.1 and 8.2 can be reported with -Wabi=12. See [33]C++
+   changes for more details.
+
+  Target Specific Changes
+
+    IA-32/x86-64
+
+     * -mtune=native performance regression [34]PR84413 on Intel Skylake
+       processors has been fixed.
 
 
     For questions related to the use of GCC, please consult these web
-    pages and the [29]GCC manuals. If that fails, the
-    [30]gcc-help@gcc.gnu.org mailing list might help. Comments on these
+    pages and the [35]GCC manuals. If that fails, the
+    [36]gcc-help@gcc.gnu.org mailing list might help. Comments on these
     web pages and the development of GCC are welcome on our developer
-    list at [31]gcc@gcc.gnu.org. All of [32]our lists have public
+    list at [37]gcc@gcc.gnu.org. All of [38]our lists have public
     archives.
 
-   Copyright (C) [33]Free Software Foundation, Inc. Verbatim copying and
+   Copyright (C) [39]Free Software Foundation, Inc. Verbatim copying and
    distribution of this entire article is permitted in any medium,
    provided this notice is preserved.
 
-   These pages are [34]maintained by the GCC team. Last modified
-   2018-04-27[35].
+   These pages are [40]maintained by the GCC team. Last modified
+   2018-07-26[41].
 
 References
 
@@ -1050,27 +1126,33 @@ References
   12. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/gcc/Warning-Options.html#index-Wrestrict
   13. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/gcc/Warning-Options.html#index-Wformat-overflow
   14. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/gcc/Warning-Options.html#index-Wformat-truncation
-  15. https://gcc.gnu.org/onlinedocs/gcc/C_002b_002b-Dialect-Options.html#index-Wclass-memaccess
-  16. http://gcc.gnu.org/projects/cxx-status.html#cxx2a
-  17. https://gcc.gnu.org/onlinedocs/jit/topics/types.html#gcc_jit_type_get_vector
-  18. https://gcc.gnu.org/onlinedocs/jit/topics/expressions.html#gcc_jit_context_new_rvalue_from_vector
-  19. https://gcc.gnu.org/onlinedocs/jit/topics/types.html#gcc_jit_type_get_aligned
-  20. https://gcc.gnu.org/onlinedocs/jit/topics/function-pointers.html#gcc_jit_function_get_address
-  21. https://gcc.gnu.org/onlinedocs/jit/topics/contexts.html#gcc_jit_context_dump_reproducer_to_file
-  22. https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html#ARM-Options
-  23. https://gcc.gnu.org/onlinedocs/gcc/AVR-Options.html
-  24. https://sourceware.org/PR21472
-  25. https://gcc.gnu.org/PR20296
-  26. https://sourceware.org/binutils/docs-2.29/as/AVR-Pseudo-Instructions.html
-  27. https://gcc.gnu.org/onlinedocs/gcc/AVR-Function-Attributes.html
-  28. https://sourceware.org/PR21683
-  29. https://gcc.gnu.org/onlinedocs/
-  30. mailto:gcc-help@gcc.gnu.org
-  31. mailto:gcc@gcc.gnu.org
-  32. https://gcc.gnu.org/lists.html
-  33. https://www.fsf.org/
-  34. https://gcc.gnu.org/about.html
-  35. http://validator.w3.org/check/referer
+  15. https://gcc.gnu.org/PR86094
+  16. https://gcc.gnu.org/onlinedocs/gcc/C_002b_002b-Dialect-Options.html#index-Wclass-memaccess
+  17. http://gcc.gnu.org/projects/cxx-status.html#cxx2a
+  18. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/jit/topics/types.html#gcc_jit_type_get_vector
+  19. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/jit/topics/expressions.html#gcc_jit_context_new_rvalue_from_vector
+  20. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/jit/topics/types.html#gcc_jit_type_get_aligned
+  21. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/jit/topics/function-pointers.html#gcc_jit_function_get_address
+  22. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/jit/topics/contexts.html#gcc_jit_context_dump_reproducer_to_file
+  23. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/gcc/ARM-Options.html#ARM-Options
+  24. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/gcc/AVR-Options.html
+  25. https://sourceware.org/PR21472
+  26. https://gcc.gnu.org/PR20296
+  27. https://sourceware.org/binutils/docs-2.29/as/AVR-Pseudo-Instructions.html
+  28. https://gcc.gnu.org/onlinedocs/gcc-8.1.0/gcc/AVR-Function-Attributes.html
+  29. https://sourceware.org/PR21683
+  30. https://gcc.gnu.org/bugzilla/buglist.cgi?bug_status=RESOLVED&resolution=FIXED&target_milestone=8.0
+  31. https://gcc.gnu.org/bugzilla/buglist.cgi?bug_status=RESOLVED&resolution=FIXED&target_milestone=8.2
+  32. https://gcc.gnu.org/PR86094
+  33. http://gcc.gnu.org/gcc-8/changes.html#cxx
+  34. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84413
+  35. https://gcc.gnu.org/onlinedocs/
+  36. mailto:gcc-help@gcc.gnu.org
+  37. mailto:gcc@gcc.gnu.org
+  38. https://gcc.gnu.org/lists.html
+  39. https://www.fsf.org/
+  40. https://gcc.gnu.org/about.html
+  41. http://validator.w3.org/check/referer
 ======================================================================
 http://gcc.gnu.org/gcc-7/index.html
                               GCC 7 Release Series
@@ -1126,7 +1208,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [19]maintained by the GCC team. Last modified
-   2018-01-30[20].
+   2018-06-10[20].
 
 References
 
@@ -1814,7 +1896,7 @@ Fortran runtime error: Loop iterates infinitely
 libgccjit
 
    The libgccjit API gained support for marking calls as requiring
-   tail-call optimization via a new entrypoint:
+   tail-call optimization via a new entry point:
    [14]gcc_jit_rvalue_set_bool_require_tail_call.
 
    libgccjit performs numerous checks at the API boundary, but if these
@@ -2182,7 +2264,7 @@ GCC 7.3
 
     SPARC
 
-     * Work arounds for the four [26]LEON3FT errata GRLIB-TN-0010..0013
+     * Workarounds for the four [26]LEON3FT errata GRLIB-TN-0010..0013
        have been added. Relevant errata are activated by the target
        specific -mfix-ut699, -mfix-ut700 and -mfix-gr712rc switches.
 
@@ -2205,7 +2287,7 @@ GCC 7.3
    provided this notice is preserved.
 
    These pages are [32]maintained by the GCC team. Last modified
-   2018-04-07[33].
+   2018-06-10[33].
 
 References
 
@@ -2300,7 +2382,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [21]maintained by the GCC team. Last modified
-   2018-01-30[22].
+   2018-06-10[22].
 
 References
 
@@ -3022,7 +3104,7 @@ Operating Systems
    provided this notice is preserved.
 
    These pages are [30]maintained by the GCC team. Last modified
-   2018-01-30[31].
+   2018-06-10[31].
 
 References
 
@@ -3118,7 +3200,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [23]maintained by the GCC team. Last modified
-   2018-01-30[24].
+   2018-06-02[24].
 
 References
 
@@ -4028,7 +4110,7 @@ Target Specific Changes
    provided this notice is preserved.
 
    These pages are [51]maintained by the GCC team. Last modified
-   2018-04-02[52].
+   2018-06-02[52].
 
 References
 
@@ -4147,7 +4229,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [23]maintained by the GCC team. Last modified
-   2018-01-30[24].
+   2018-06-02[24].
 
 References
 
@@ -4786,7 +4868,7 @@ GCC 4.9.4
    provided this notice is preserved.
 
    These pages are [34]maintained by the GCC team. Last modified
-   2018-01-30[35].
+   2018-06-02[35].
 
 References
 
@@ -4891,7 +4973,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [25]maintained by the GCC team. Last modified
-   2018-01-30[26].
+   2018-06-02[26].
 
 References
 
@@ -5646,7 +5728,7 @@ GCC 4.8.5
    provided this notice is preserved.
 
    These pages are [43]maintained by the GCC team. Last modified
-   2018-01-30[44].
+   2018-06-02[44].
 
 References
 
@@ -5757,7 +5839,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [23]maintained by the GCC team. Last modified
-   2018-01-30[24].
+   2018-06-02[24].
 
 References
 
@@ -6578,7 +6660,7 @@ GCC 4.7.4
    provided this notice is preserved.
 
    These pages are [55]maintained by the GCC team. Last modified
-   2018-04-02[56].
+   2018-07-15[56].
 
 References
 
@@ -6607,7 +6689,7 @@ References
   23. https://gcc.gnu.org/onlinedocs/gcc-4.7.1/gfortran/Code-Gen-Options.html#index-g_t_0040code_007bfaggressive-function-elimination_007d-270
   24. https://gcc.gnu.org/onlinedocs/gcc-4.7.1/gfortran/Error-and-Warning-Options.html#index-g_t_0040code_007bWreal-q-constant_007d-149
   25. https://gcc.gnu.org/onlinedocs/gcc-4.7.1/gfortran/SELECTED_005fREAL_005fKIND.html
-  26. https://msdn.microsoft.com/en-us/library/bb787181(v=vs.85).aspx
+  26. https://docs.microsoft.com/en-us/windows/desktop/wer/collecting-user-mode-dumps
   27. https://gcc.gnu.org/onlinedocs/gcc-4.7.1/gfortran/Debugging-Options.html#index-g_t_0040code_007bfno-backtrace_007d-183
   28. https://gcc.gnu.org/wiki/Fortran2003Status
   29. https://gcc.gnu.org/wiki/OOP
@@ -6701,7 +6783,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [23]maintained by the GCC team. Last modified
-   2018-01-30[24].
+   2018-06-02[24].
 
 References
 
@@ -7625,7 +7707,7 @@ GCC 4.6.4
    provided this notice is preserved.
 
    These pages are [29]maintained by the GCC team. Last modified
-   2018-01-30[30].
+   2018-06-02[30].
 
 References
 
@@ -7722,7 +7804,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [18]maintained by the GCC team. Last modified
-   2018-01-30[19].
+   2018-06-02[19].
 
 References
 
@@ -8394,7 +8476,7 @@ GCC 4.5.4
    provided this notice is preserved.
 
    These pages are [32]maintained by the GCC team. Last modified
-   2018-03-10[33].
+   2018-06-02[33].
 
 References
 
@@ -8503,7 +8585,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [21]maintained by the GCC team. Last modified
-   2018-01-30[22].
+   2018-06-02[22].
 
 References
 
@@ -9133,7 +9215,7 @@ GCC 4.4.7
    provided this notice is preserved.
 
    These pages are [23]maintained by the GCC team. Last modified
-   2018-01-30[24].
+   2018-06-02[24].
 
 References
 
@@ -9230,7 +9312,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [20]maintained by the GCC team. Last modified
-   2018-01-30[21].
+   2018-06-02[21].
 
 References
 
@@ -10035,13 +10117,13 @@ GCC 4.3.6
    provided this notice is preserved.
 
    These pages are [33]maintained by the GCC team. Last modified
-   2018-01-30[34].
+   2018-07-14[34].
 
 References
 
    1. http://gcc.gnu.org/gcc-4.3/changes.html#4.3.5
    2. https://gmplib.org/
-   3. http://www.mpfr.org/
+   3. https://www.mpfr.org/
    4. https://gcc.gnu.org/install/prerequisites.html
    5. https://gcc.gnu.org/ml/gcc-announce/2001/msg00000.html
    6. https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#Warning-Options
@@ -10136,7 +10218,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [18]maintained by the GCC team. Last modified
-   2018-01-30[19].
+   2018-06-02[19].
 
 References
 
@@ -10464,7 +10546,7 @@ Other significant improvements
    provided this notice is preserved.
 
    These pages are [11]maintained by the GCC team. Last modified
-   2018-04-02[12].
+   2018-06-02[12].
 
 References
 
@@ -10537,7 +10619,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [16]maintained by the GCC team. Last modified
-   2018-01-30[17].
+   2018-06-02[17].
 
 References
 
@@ -11100,7 +11182,7 @@ GCC 4.1.2
    provided this notice is preserved.
 
    These pages are [12]maintained by the GCC team. Last modified
-   2018-01-30[13].
+   2018-06-02[13].
 
 References
 
@@ -11180,7 +11262,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [18]maintained by the GCC team. Last modified
-   2018-01-30[19].
+   2018-06-02[19].
 
 References
 
@@ -11706,7 +11788,7 @@ GCC 4.0.4
    provided this notice is preserved.
 
    These pages are [21]maintained by the GCC team. Last modified
-   2018-04-02[22].
+   2018-06-02[22].
 
 References
 
@@ -11806,7 +11888,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [22]maintained by the GCC team. Last modified
-   2018-01-30[23].
+   2018-06-02[23].
 
 References
 
@@ -13594,7 +13676,7 @@ GCC 3.4.6
    provided this notice is preserved.
 
    These pages are [416]maintained by the GCC team. Last modified
-   2018-04-02[417].
+   2018-06-02[417].
 
 References
 
@@ -13604,7 +13686,7 @@ References
    4. http://gcc.gnu.org/gcc-3.4/changes.html#obsolete_systems
    5. http://gcc.gnu.org/gcc-3.4/mips-abi.html
    6. http://gcc.gnu.org/gcc-3.4/sparc-abi.html
-   7. http://www.boost.org/
+   7. https://www.boost.org/
    8. https://gcc.gnu.org/PR11953
    9. https://gcc.gnu.org/PR8361
   10. https://gcc.gnu.org/onlinedocs/gcc-3.4.3/gcc/Other-Builtins.html#Other Builtins
@@ -14090,7 +14172,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [21]maintained by the GCC team. Last modified
-   2018-01-30[22].
+   2018-06-02[22].
 
 References
 
@@ -15465,7 +15547,7 @@ GCC 3.3.6
    provided this notice is preserved.
 
    These pages are [556]maintained by the GCC team. Last modified
-   2018-01-30[557].
+   2018-06-02[557].
 
 References
 
@@ -16095,7 +16177,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [17]maintained by the GCC team. Last modified
-   2018-01-30[18].
+   2018-06-02[18].
 
 References
 
@@ -16718,7 +16800,7 @@ GCC 3.2
    provided this notice is preserved.
 
    These pages are [251]maintained by the GCC team. Last modified
-   2018-01-30[252].
+   2018-06-02[252].
 
 References
 
@@ -17023,7 +17105,7 @@ http://gcc.gnu.org/gcc-3.1/index.html
    provided this notice is preserved.
 
    These pages are [14]maintained by the GCC team. Last modified
-   2018-01-30[15].
+   2018-06-02[15].
 
 References
 
@@ -17377,7 +17459,7 @@ Documentation improvements
    provided this notice is preserved.
 
    These pages are [13]maintained by the GCC team. Last modified
-   2018-01-30[14].
+   2018-06-02[14].
 
 References
 
@@ -17451,7 +17533,7 @@ Previous 3.0.x Releases
    provided this notice is preserved.
 
    These pages are [14]maintained by the GCC team. Last modified
-   2018-01-30[15].
+   2018-06-02[15].
 
 References
 
@@ -17642,7 +17724,7 @@ Other significant improvements
    provided this notice is preserved.
 
    These pages are [18]maintained by the GCC team. Last modified
-   2018-01-30[19].
+   2018-06-02[19].
 
 References
 
@@ -17713,7 +17795,7 @@ http://gcc.gnu.org/gcc-3.0/caveats.html
    provided this notice is preserved.
 
    These pages are [7]maintained by the GCC team. Last modified
-   2018-01-30[8].
+   2018-06-02[8].
 
 References
 
@@ -17795,7 +17877,7 @@ References and Acknowledgements
    provided this notice is preserved.
 
    These pages are [15]maintained by the GCC team. Last modified
-   2018-01-30[16].
+   2018-06-02[16].
 
 References
 
@@ -18060,7 +18142,7 @@ Additional Changes in GCC 2.95.3
    provided this notice is preserved.
 
    These pages are [22]maintained by the GCC team. Last modified
-   2018-01-30[23].
+   2018-06-02[23].
 
 References
 
@@ -18143,7 +18225,7 @@ http://gcc.gnu.org/gcc-2.95/caveats.html
    provided this notice is preserved.
 
    These pages are [7]maintained by the GCC team. Last modified
-   2018-01-30[8].
+   2018-06-02[8].
 
 References
 
@@ -18364,7 +18446,7 @@ http://gcc.gnu.org/egcs-1.1/index.html
    provided this notice is preserved.
 
    These pages are [15]maintained by the GCC team. Last modified
-   2018-01-30[16].
+   2018-06-02[16].
 
 References
 
@@ -18463,7 +18545,7 @@ http://gcc.gnu.org/egcs-1.1/features.html
    provided this notice is preserved.
 
    These pages are [10]maintained by the GCC team. Last modified
-   2018-01-30[11].
+   2018-06-02[11].
 
 References
 
@@ -18517,7 +18599,7 @@ http://gcc.gnu.org/egcs-1.1/caveats.html
    provided this notice is preserved.
 
    These pages are [6]maintained by the GCC team. Last modified
-   2018-01-30[7].
+   2018-06-02[7].
 
 References
 
@@ -18713,7 +18795,7 @@ http://gcc.gnu.org/egcs-1.0/index.html
    provided this notice is preserved.
 
    These pages are [10]maintained by the GCC team. Last modified
-   2018-01-30[11].
+   2018-06-02[11].
 
 References
 
@@ -18779,7 +18861,7 @@ http://gcc.gnu.org/egcs-1.0/features.html
    provided this notice is preserved.
 
    These pages are [8]maintained by the GCC team. Last modified
-   2018-01-30[9].
+   2018-06-02[9].
 
 References
 
@@ -18832,7 +18914,7 @@ http://gcc.gnu.org/egcs-1.0/caveats.html
    provided this notice is preserved.
 
    These pages are [6]maintained by the GCC team. Last modified
-   2018-01-30[7].
+   2018-06-02[7].
 
 References
 

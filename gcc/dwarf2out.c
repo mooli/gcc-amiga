@@ -9982,7 +9982,15 @@ new_loc_list (dw_loc_descr_ref expr, const char *begin, var_loc_view vbegin,
   return retlist;
 }
 
-/* Return true iff there's any nonzero view number in the loc list.  */
+/* Return true iff there's any nonzero view number in the loc list.
+
+   ??? When views are not enabled, we'll often extend a single range
+   to the entire function, so that we emit a single location
+   expression rather than a location list.  With views, even with a
+   single range, we'll output a list if start or end have a nonzero
+   view.  If we change this, we may want to stop splitting a single
+   range in dw_loc_list just because of a nonzero view, even if it
+   straddles across hot/cold partitions.  */
 
 static bool
 loc_list_has_views (dw_loc_list_ref list)
@@ -17090,7 +17098,13 @@ dw_loc_list (var_loc_list *loc_list, tree decl, int want_address)
 		 of first partition and second one starting at the
 		 beginning of second partition.  */
 	      if (node == loc_list->last_before_switch
-		  && (node != loc_list->first || loc_list->first->next)
+		  && (node != loc_list->first || loc_list->first->next
+		      /* If we are to emit a view number, we will emit
+			 a loclist rather than a single location
+			 expression for the entire function (see
+			 loc_list_has_views), so we have to split the
+			 range that straddles across partitions.  */
+		      || !ZERO_VIEW_P (node->view))
 		  && current_function_decl)
 		{
 		  endname = cfun->fde->dw_fde_end;
@@ -25364,11 +25378,8 @@ gen_type_die_with_usage (tree type, dw_die_ref context_die,
      generate debug info for the typedef.  */
   if (is_naming_typedef_decl (TYPE_NAME (type)))
     {
-      /* Use the DIE of the containing namespace as the parent DIE of
-         the type description DIE we want to generate.  */
-      if (DECL_CONTEXT (TYPE_NAME (type))
-	  && TREE_CODE (DECL_CONTEXT (TYPE_NAME (type))) == NAMESPACE_DECL)
-	context_die = get_context_die (DECL_CONTEXT (TYPE_NAME (type)));
+      /* Give typedefs the right scope.  */
+      context_die = scope_die_for (type, context_die);
 
       gen_decl_die (TYPE_NAME (type), NULL, NULL, context_die);
       return;
@@ -28461,7 +28472,7 @@ init_sections_and_labels (bool early_lto_debug)
       debug_str_section = get_section (DEBUG_LTO_STR_SECTION,
 				       DEBUG_STR_SECTION_FLAGS
 				       | SECTION_EXCLUDE, NULL);
-      if (!dwarf_split_debug_info && !dwarf2out_as_loc_support)
+      if (!dwarf_split_debug_info && !output_asm_line_debug_info ())
 	debug_line_str_section
 	  = get_section (DEBUG_LTO_LINE_STR_SECTION,
 			 DEBUG_STR_SECTION_FLAGS | SECTION_EXCLUDE, NULL);
@@ -31044,9 +31055,9 @@ dwarf2out_finish (const char *)
 	  if (*slot != HTAB_EMPTY_ENTRY)
 	    continue;
 
-	  /* Add a pointer to the line table for the main compilation unit
-	     so that the debugger can make sense of DW_AT_decl_file
-	     attributes.  */
+	  /* Remove the pointer to the line table.  */
+	  remove_AT (ctnode->root_die, DW_AT_stmt_list);
+
 	  if (debug_info_level >= DINFO_LEVEL_TERSE)
 	    reset_dies (ctnode->root_die);
 
@@ -31710,7 +31721,7 @@ dwarf2out_early_finish (const char *filename)
 
   /* When emitting DWARF5 .debug_line_str, move DW_AT_name and
      DW_AT_comp_dir into .debug_line_str section.  */
-  if (!dwarf2out_as_loc_support
+  if (!output_asm_line_debug_info ()
       && dwarf_version >= 5
       && DWARF5_USE_DEBUG_LINE_STR)
     {

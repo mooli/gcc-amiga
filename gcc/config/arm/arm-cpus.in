@@ -234,7 +234,7 @@ define fgroup ARMv6zk     ARMv6k
 define fgroup ARMv6t2     ARMv6 thumb2
 # This is suspect.  ARMv6-m doesn't really pull in any useful features
 # from ARMv5* or ARMv6.
-define fgroup ARMv6m      mode32 armv3m armv4 thumb armv5 armv5e armv6
+define fgroup ARMv6m      mode32 armv3m armv4 thumb armv5 armv5e armv6 be8
 # This is suspect, the 'common' ARMv7 subset excludes the thumb2 'DSP' and
 # integer SIMD instructions that are in ARMv6T2.  */
 define fgroup ARMv7       ARMv6m thumb2 armv7
@@ -268,7 +268,9 @@ define fgroup DOTPROD	NEON dotprod
 
 # List of all quirk bits to strip out when comparing CPU features with
 # architectures.
-define fgroup ALL_QUIRKS   quirk_no_volatile_ce quirk_armv6kz quirk_cm3_ldrd
+# xscale isn't really a 'quirk', but it isn't an architecture either and we
+# need to ignore it for matching purposes.
+define fgroup ALL_QUIRKS   quirk_no_volatile_ce quirk_armv6kz quirk_cm3_ldrd xscale
 
 # Architecture entries
 # format:
@@ -446,6 +448,8 @@ begin arch armv6-m
  isa ARMv6m
 end arch armv6-m
 
+# This is now equivalent to armv6-m, but we keep it because some
+# versions of GAS still distinguish between the two.
 begin arch armv6s-m
  tune for cortex-m1
  base 6M
@@ -1168,21 +1172,21 @@ end cpu arm1156t2f-s
 begin cpu cortex-m1
  cname cortexm1
  tune flags LDSCHED
- architecture armv6-m
+ architecture armv6s-m
  costs v6m
 end cpu cortex-m1
 
 begin cpu cortex-m0
  cname cortexm0
  tune flags LDSCHED
- architecture armv6-m
+ architecture armv6s-m
  costs v6m
 end cpu cortex-m0
 
 begin cpu cortex-m0plus
  cname cortexm0plus
  tune flags LDSCHED
- architecture armv6-m
+ architecture armv6s-m
  costs v6m
 end cpu cortex-m0plus
 
@@ -1192,7 +1196,7 @@ begin cpu cortex-m1.small-multiply
  cname cortexm1smallmultiply
  tune for cortex-m1
  tune flags LDSCHED SMALLMUL
- architecture armv6-m
+ architecture armv6s-m
  costs v6m
 end cpu cortex-m1.small-multiply
 
@@ -1200,7 +1204,7 @@ begin cpu cortex-m0.small-multiply
  cname cortexm0smallmultiply
  tune for cortex-m0
  tune flags LDSCHED SMALLMUL
- architecture armv6-m
+ architecture armv6s-m
  costs v6m
 end cpu cortex-m0.small-multiply
 
@@ -1208,7 +1212,7 @@ begin cpu cortex-m0plus.small-multiply
  cname cortexm0plussmallmultiply
  tune for cortex-m0plus
  tune flags LDSCHED SMALLMUL
- architecture armv6-m
+ architecture armv6s-m
  costs v6m
 end cpu cortex-m0plus.small-multiply
 

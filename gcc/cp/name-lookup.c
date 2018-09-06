@@ -6624,6 +6624,14 @@ do_pushtag (tree name, tree type, tag_scope scope)
 	{
 	  tree cs = current_scope ();
 
+	  /* Avoid setting the lambda context to a current_function_decl that
+	     we aren't actually inside, e.g. one set by push_access_scope
+	     during tsubst_default_argument.  */
+	  if (cs && TREE_CODE (cs) == FUNCTION_DECL
+	      && LAMBDA_TYPE_P (type)
+	      && !at_function_scope_p ())
+	    cs = DECL_CONTEXT (cs);
+
 	  if (scope == ts_current
 	      || (cs && TREE_CODE (cs) == FUNCTION_DECL))
 	    context = cs;
@@ -6928,7 +6936,7 @@ do_push_to_top_level (void)
 
   scope_chain = s;
   current_function_decl = NULL_TREE;
-  vec_alloc (current_lang_base, 10);
+  current_lang_base = NULL;
   current_lang_name = lang_name_cplusplus;
   current_namespace = global_namespace;
   push_class_stack ();
@@ -6948,7 +6956,7 @@ do_pop_from_top_level (void)
     invalidate_class_lookup_cache ();
   pop_class_stack ();
 
-  current_lang_base = 0;
+  release_tree_vector (current_lang_base);
 
   scope_chain = s->prev;
   FOR_EACH_VEC_SAFE_ELT (s->old_bindings, i, saved)

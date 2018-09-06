@@ -736,7 +736,7 @@ finish_if_stmt_cond (tree cond, tree if_stmt)
       && !instantiation_dependent_expression_p (cond)
       /* Wait until instantiation time, since only then COND has been
 	 converted to bool.  */
-      && TREE_TYPE (cond) == boolean_type_node)
+      && TYPE_MAIN_VARIANT (TREE_TYPE (cond)) == boolean_type_node)
     {
       cond = instantiate_non_dependent_expr (cond);
       cond = cxx_constant_value (cond, NULL_TREE);
@@ -2107,6 +2107,8 @@ finish_qualified_id_expr (tree qualifying_class,
 	 non-type template argument handling.  */
       if (processing_template_decl
 	  && (!currently_open_class (qualifying_class)
+	      || TREE_CODE (expr) == IDENTIFIER_NODE
+	      || TREE_CODE (expr) == TEMPLATE_ID_EXPR
 	      || TREE_CODE (expr) == BIT_NOT_EXPR))
 	expr = build_qualified_name (TREE_TYPE (expr),
 				     qualifying_class, expr,
@@ -7311,7 +7313,7 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 
 	  if (VAR_P (t) && CP_DECL_THREAD_LOCAL_P (t))
 	    share_name = "threadprivate";
-	  else switch (cxx_omp_predetermined_sharing (t))
+	  else switch (cxx_omp_predetermined_sharing_1 (t))
 	    {
 	    case OMP_CLAUSE_DEFAULT_UNSPECIFIED:
 	      break;
