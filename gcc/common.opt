@@ -701,6 +701,9 @@ Warn when one local variable shadows another local variable or parameter of comp
 Wshadow-compatible-local
 Common Warning Undocumented Alias(Wshadow=compatible-local)
 
+Wsibcall-disabled
+Common Warning Undocumented
+
 Wstack-protector
 Common Var(warn_stack_protect) Warning
 Warn when not issuing stack smashing protection for some reason.

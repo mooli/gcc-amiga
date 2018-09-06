@@ -491,12 +491,10 @@ extern enum reg_class regno_reg_class[];
 #define FUNCTION_ARG_REGNO_P(N) 0
 
 
-/* Define a data type for recording info about an argument list
-   during the scan of that argument list.  This data type should
-   hold all necessary information about the function itself
-   and about the args processed so far, enough to enable macros
-   such as FUNCTION_ARG to determine where the next arg should go.  */
-
+/* Define a data type for recording info about an argument list during the scan of that argument
+   list. This data type should hold all necessary information about the function itself and about
+   the args processed so far, enough to enable macros such as FUNCTION_ARG to determine where the
+   next arg should go. */
 typedef struct m68k_args {
     int bytes;			/* bytes of stack-based arguments scanned so far */
     size_t regparm_next;	/* index of next regparm argument */
@@ -505,12 +503,10 @@ typedef struct m68k_args {
     bool regparm_clobber;	/* true if a regparm is in a noclobber register */
 } CUMULATIVE_ARGS;
 
-/* Initialize a variable CUM of type CUMULATIVE_ARGS
-   for a call to a function whose data type is FNTYPE.
-   For a library call, FNTYPE is 0.  */
-
+/* Initialize a variable CUM of type CUMULATIVE_ARGS for a call to a function whose data type is
+   FNTYPE. For a library call, FNTYPE is 0. */
 #define INIT_CUMULATIVE_ARGS(CUM, FNTYPE, LIBNAME, FNDECL, N_NAMED_ARGS) \
-  init_cumulative_args (&(CUM), (FNTYPE), (LIBNAME), (FNDECL), \
+  m68k_init_cumulative_args (&(CUM), (FNTYPE), (LIBNAME), (FNDECL),		\
 			(N_NAMED_ARGS) != -1)
 
 #define FUNCTION_PROFILER(FILE, LABELNO)  \
