@@ -2422,7 +2422,7 @@ check_inquiry (gfc_expr *e, int not_restricted)
 
 	/* Assumed character length will not reduce to a constant expression
 	   with LEN, as required by the standard.  */
-	if (i == 5 && not_restricted
+	if (i == 5 && not_restricted && ap->expr->symtree
 	    && ap->expr->symtree->n.sym->ts.type == BT_CHARACTER
 	    && (ap->expr->symtree->n.sym->ts.u.cl->length == NULL
 		|| ap->expr->symtree->n.sym->ts.deferred))
@@ -3414,6 +3414,8 @@ gfc_check_assign (gfc_expr *lvalue, gfc_expr *rvalue, int conform,
   /* Only DATA Statements come here.  */
   if (!conform)
     {
+      locus *where;
+
       /* Numeric can be converted to any other numeric. And Hollerith can be
 	 converted to any other type.  */
       if ((gfc_numeric_ts (&lvalue->ts) && gfc_numeric_ts (&rvalue->ts))
@@ -3423,8 +3425,9 @@ gfc_check_assign (gfc_expr *lvalue, gfc_expr *rvalue, int conform,
       if (lvalue->ts.type == BT_LOGICAL && rvalue->ts.type == BT_LOGICAL)
 	return true;
 
+      where = lvalue->where.lb ? &lvalue->where : &rvalue->where;
       gfc_error ("Incompatible types in DATA statement at %L; attempted "
-		 "conversion of %s to %s", &lvalue->where,
+		 "conversion of %s to %s", where,
 		 gfc_typename (&rvalue->ts), gfc_typename (&lvalue->ts));
 
       return false;
@@ -4424,25 +4427,60 @@ get_union_initializer (gfc_symbol *union_type, gfc_component **map_p)
   return init;
 }
 
+static bool
+class_allocatable (gfc_component *comp)
+{
+  return comp->ts.type == BT_CLASS && CLASS_DATA (comp)
+    && CLASS_DATA (comp)->attr.allocatable;
+}
+
+static bool
+class_pointer (gfc_component *comp)
+{
+  return comp->ts.type == BT_CLASS && CLASS_DATA (comp)
+    && CLASS_DATA (comp)->attr.pointer;
+}
+
+static bool
+comp_allocatable (gfc_component *comp)
+{
+  return comp->attr.allocatable || class_allocatable (comp);
+}
+
+static bool
+comp_pointer (gfc_component *comp)
+{
+  return comp->attr.pointer
+    || comp->attr.pointer
+    || comp->attr.proc_pointer
+    || comp->attr.class_pointer
+    || class_pointer (comp);
+}
+
 /* Fetch or generate an initializer for the given component.
    Only generate an initializer if generate is true.  */
 
 static gfc_expr *
-component_initializer (gfc_typespec *ts, gfc_component *c, bool generate)
+component_initializer (gfc_component *c, bool generate)
 {
   gfc_expr *init = NULL;
 
-  /* See if we can find the initializer immediately.
-     Some components should never get initializers.  */
-  if (c->initializer || !generate
-      || (ts->type == BT_CLASS && !c->attr.allocatable)
-      || c->attr.pointer
-      || c->attr.class_pointer
-      || c->attr.proc_pointer)
+  /* Allocatable components always get EXPR_NULL.
+     Pointer components are only initialized when generating, and only if they
+     do not already have an initializer.  */
+  if (comp_allocatable (c) || (generate && comp_pointer (c) && !c->initializer))
+    {
+      init = gfc_get_null_expr (&c->loc);
+      init->ts = c->ts;
+      return init;
+    }
+
+  /* See if we can find the initializer immediately.  */
+  if (c->initializer || !generate)
     return c->initializer;
 
   /* Recursively handle derived type components.  */
-  if (c->ts.type == BT_DERIVED || c->ts.type == BT_CLASS)
+  else if (c->ts.type == BT_DERIVED || c->ts.type == BT_CLASS)
     init = gfc_generate_initializer (&c->ts, true);
 
   else if (c->ts.type == BT_UNION && c->ts.u.derived->components)
@@ -4502,6 +4540,32 @@ gfc_default_initializer (gfc_typespec *ts)
   return gfc_generate_initializer (ts, false);
 }
 
+/* Generate an initializer expression for an iso_c_binding type
+   such as c_[fun]ptr. The appropriate initializer is c_null_[fun]ptr.  */
+
+static gfc_expr *
+generate_isocbinding_initializer (gfc_symbol *derived)
+{
+  /* The initializers have already been built into the c_null_[fun]ptr symbols
+     from gen_special_c_interop_ptr.  */
+  gfc_symtree *npsym = NULL;
+  if (0 == strcmp (derived->name, "c_ptr"))
+    gfc_find_sym_tree ("c_null_ptr", gfc_current_ns, true, &npsym);
+  else if (0 == strcmp (derived->name, "c_funptr"))
+    gfc_find_sym_tree ("c_null_funptr", gfc_current_ns, true, &npsym);
+  else
+    gfc_internal_error ("generate_isocbinding_initializer(): bad iso_c_binding"
+			" type, expected %<c_ptr%> or %<c_funptr%>");
+  if (npsym)
+    {
+      gfc_expr *init = gfc_copy_expr (npsym->n.sym->value);
+      init->symtree = npsym;
+      init->ts.is_iso_c = true;
+      return init;
+    }
+
+  return NULL;
+}
 
 /* Get or generate an expression for a default initializer of a derived type.
    If -finit-derived is specified, generate default initialization expressions
@@ -4512,7 +4576,11 @@ gfc_generate_initializer (gfc_typespec *ts, bool generate)
 {
   gfc_expr *init, *tmp;
   gfc_component *comp;
+
   generate = flag_init_derived && generate;
+
+  if (ts->u.derived->ts.is_iso_c && generate)
+    return generate_isocbinding_initializer (ts->u.derived);
 
   /* See if we have a default initializer in this, but not in nested
      types (otherwise we could use gfc_has_default_initializer()).
@@ -4521,9 +4589,7 @@ gfc_generate_initializer (gfc_typespec *ts, bool generate)
   if (!generate)
     {
       for (; comp; comp = comp->next)
-        if (comp->initializer || comp->attr.allocatable
-            || (comp->ts.type == BT_CLASS && CLASS_DATA (comp)
-                && CLASS_DATA (comp)->attr.allocatable))
+	if (comp->initializer || comp_allocatable (comp))
           break;
     }
 
@@ -4539,7 +4605,7 @@ gfc_generate_initializer (gfc_typespec *ts, bool generate)
       gfc_constructor *ctor = gfc_constructor_get();
 
       /* Fetch or generate an initializer for the component.  */
-      tmp = component_initializer (ts, comp, generate);
+      tmp = component_initializer (comp, generate);
       if (tmp)
 	{
 	  /* Save the component ref for STRUCTUREs and UNIONs.  */
@@ -4549,8 +4615,7 @@ gfc_generate_initializer (gfc_typespec *ts, bool generate)
 
           /* If the initializer was not generated, we need a copy.  */
           ctor->expr = comp->initializer ? gfc_copy_expr (tmp) : tmp;
-	  if ((comp->ts.type != tmp->ts.type
-	       || comp->ts.kind != tmp->ts.kind)
+	  if ((comp->ts.type != tmp->ts.type || comp->ts.kind != tmp->ts.kind)
 	      && !comp->attr.pointer && !comp->attr.proc_pointer)
 	    {
 	      bool val;
@@ -4558,15 +4623,6 @@ gfc_generate_initializer (gfc_typespec *ts, bool generate)
 	      if (val == false)
 		return NULL;
 	    }
-	}
-
-      if (comp->attr.allocatable
-	  || (comp->ts.type == BT_CLASS && CLASS_DATA (comp)->attr.allocatable))
-	{
-	  ctor->expr = gfc_get_expr ();
-	  ctor->expr->expr_type = EXPR_NULL;
-	  ctor->expr->where = init->where;
-	  ctor->expr->ts = comp->ts;
 	}
 
       gfc_constructor_append (&init->value.constructor, ctor);

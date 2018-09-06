@@ -323,7 +323,7 @@ Objective-C and Objective-C++ Dialects}.
 -Wswitch-unreachable  -Wsync-nand @gol
 -Wsystem-headers  -Wtautological-compare  -Wtrampolines  -Wtrigraphs @gol
 -Wtype-limits  -Wundef @gol
--Wuninitialized  -Wunknown-pragmas  -Wunsafe-loop-optimizations @gol
+-Wuninitialized  -Wunknown-pragmas @gol
 -Wunsuffixed-float-constants  -Wunused  -Wunused-function @gol
 -Wunused-label  -Wunused-local-typedefs  -Wunused-macros @gol
 -Wunused-parameter  -Wno-unused-result @gol
@@ -2356,6 +2356,15 @@ the same name within a function, that are declared in different scopes,
 the mangling now changes starting with the twelfth occurrence.  It also
 implies @option{-fnew-inheriting-ctors}.
 
+Version 12, which first appeared in G++ 8, corrects the calling
+conventions for empty classes on the x86_64 target and for classes
+with only deleted copy/move constructors.  It accidentally changes the
+calling convention for classes with a deleted copy constructor and a
+trivial move constructor.
+
+Version 13, which first appeared in G++ 8.2, fixes the accidental
+change in version 12.
+
 See also @option{-Wabi}.
 
 @item -fabi-compat-version=@var{n}
@@ -2365,7 +2374,7 @@ works around mangling changes by creating an alias with the correct
 mangled name when defining a symbol with an incorrect mangled name.
 This switch specifies which ABI version to use for the alias.
 
-With @option{-fabi-version=0} (the default), this defaults to 8 (GCC 5
+With @option{-fabi-version=0} (the default), this defaults to 11 (GCC 7
 compatibility).  If another ABI version is explicitly selected, this
 defaults to 0.  For compatibility with GCC versions 3.2 through 4.9,
 use @option{-fabi-compat-version=2}.
@@ -3953,6 +3962,7 @@ Options} and @ref{Objective-C and Objective-C++ Dialect Options}.
 -Wsizeof-pointer-memaccess @gol
 -Wstrict-aliasing  @gol
 -Wstrict-overflow=1  @gol
+-Wstringop-truncation  @gol
 -Wswitch  @gol
 -Wtautological-compare  @gol
 -Wtrigraphs  @gol
@@ -5374,6 +5384,8 @@ however, are not suitable arguments to functions that expect
 such arrays GCC issues warnings unless it can prove that the use is
 safe.  @xref{Common Variable Attributes}.
 
+Option @option{-Wstringop-truncation} is enabled by @option{-Wall}.
+
 @item -Wsuggest-attribute=@r{[}pure@r{|}const@r{|}noreturn@r{|}format@r{|}cold@r{|}malloc@r{]}
 @opindex Wsuggest-attribute=
 @opindex Wno-suggest-attribute=
@@ -5488,6 +5500,9 @@ precision would exceed @code{SIZE_MAX / 2}.  The option argument @var{n}
 may end in one of the standard suffixes designating a multiple of bytes
 such as @code{kB} and @code{KiB} for kilobyte and kibibyte, respectively,
 @code{MB} and @code{MiB} for megabyte and mebibyte, and so on.
+@option{-Walloc-size-larger-than=}@var{PTRDIFF_MAX} is enabled by default.
+Warnings controlled by the option can be disabled by specifying @var{n}
+of @var{SIZE_MAX} or more.
 @xref{Function Attributes}.
 
 @item -Walloca
@@ -5957,14 +5972,6 @@ If the stack usage is (partly) dynamic and not bounded, it's:
   warning: stack usage might be unbounded
 @end smallexample
 @end itemize
-
-@item -Wunsafe-loop-optimizations
-@opindex Wunsafe-loop-optimizations
-@opindex Wno-unsafe-loop-optimizations
-Warn if the loop cannot be optimized because the compiler cannot
-assume anything on the bounds of the loop indices.  With
-@option{-funsafe-loop-optimizations} warn if the compiler makes
-such assumptions.
 
 @item -Wno-pedantic-ms-format @r{(MinGW targets only)}
 @opindex Wno-pedantic-ms-format
@@ -8866,6 +8873,13 @@ for (int i = 0; i < N; i++)
     for (int j = 0; j < N; j++)
       c[i][j] = c[i][j] + a[i][k]*b[k][j];
 @end smallexample
+This flag is enabled by default at @option{-O3}.
+
+@item -floop-unroll-and-jam
+@opindex floop-unroll-and-jam
+Apply unroll and jam transformations on feasible loops.  In a loop
+nest this unrolls the outer loop by some factor and fuses the resulting
+multiple inner loops.  This flag is enabled by default at @option{-O3}.
 
 @item -ftree-loop-im
 @opindex ftree-loop-im
@@ -10037,12 +10051,6 @@ for one side of the iteration space and false for the other.
 @opindex funswitch-loops
 Move branches with loop invariant conditions out of the loop, with duplicates
 of the loop on both branches (modified according to result of the condition).
-
-@item -floop-unroll-and-jam
-@opindex floop-unroll-and-jam
-Apply unroll and jam transformations on feasible loops.  In a loop
-nest this unrolls the outer loop by some factor and fuses the resulting
-multiple inner loops.
 
 @item -ffunction-sections
 @itemx -fdata-sections
